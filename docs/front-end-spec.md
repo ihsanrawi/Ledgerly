@@ -6,18 +6,19 @@ This document defines the user experience goals, information architecture, user 
 
 Ledgerly is a **local-first, dashboard-driven personal finance manager** that bridges the power of Plain Text Accounting (Ledger, hledger, beancount) with the intuitiveness of modern consumer finance apps. Unlike cloud-based competitors (YNAB, Mint) or utilitarian PTA tools (Fava), Ledgerly combines:
 
-- **Data Ownership:** Local SQLite storage with portable Ledger file exports (no vendor lock-in)
+- **Data Ownership:** Local .hledger file storage (source of truth) with SQLite caching for performance (no vendor lock-in)
 - **Predictive Intelligence:** Cash flow timeline forecasting and recurring transaction detection
 - **Developer Aesthetic:** Clean, modern UI inspired by VS Code and GitHub (not consumer finance pastels)
 - **Privacy-First:** Fully offline, no telemetry, no cloud dependency
 
-**Competitive Positioning:** *"Ledger's power, YNAB's ease, your data."*
+**Competitive Positioning:** *"hledger's power, YNAB's ease, your data."*
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
 | 2025-10-03 | 1.0 | Initial UI/UX Specification | Sally (UX Expert) |
+| 2025-10-03 | 1.1 | Architecture alignment: hledger + .hledger files | John (PM) |
 
 ---
 
@@ -101,8 +102,8 @@ Based on Persona 1's journey map (monthly reconciliation workflow reducing 140 m
 4. **Error Prevention & Recovery (Trust & Data Integrity)**
    - Duplicate detection prevents accidental re-imports (23 duplicates caught automatically in user journey)
    - Balance validation alerts to discrepancies before saving
-   - Ledger file compatibility checks ensure 100% valid exports
-   - Success metric: <0.1% data corruption incidents; zero invalid Ledger file exports
+   - hledger validation (`hledger check`) ensures 100% valid .hledger files
+   - Success metric: <0.1% data corruption incidents; zero invalid .hledger file exports
 
 5. **Household Accessibility (Phase 2 - Shared Understanding)**
    - Non-technical users (Persona 3) can view financial insights and answer basic questions without terminal knowledge
@@ -138,7 +139,7 @@ These principles guide every design decision, interaction pattern, and visual tr
   - Category suggestions show confidence indicators (green checkmark = high confidence, yellow = review needed)
   - Cash Flow Timeline includes tooltip: "Based on 12 recurring transactions detected from last 6 months"
   - Duplicate detection shows expandable list: "23 duplicates auto-skipped" with "Review Duplicates" button
-  - Ledger file preview available in Settings (but not required workflow)
+  - .hledger file preview available in Settings (but not required workflow)
 
 - **Trust Signal:** Users can verify the system's work, building confidence over time
 
@@ -148,7 +149,7 @@ These principles guide every design decision, interaction pattern, and visual tr
 - **In Practice:**
   - Visual inspiration: VS Code, GitHub, Linear (not YNAB pastels or Mint's friendly mascots)
   - Color palette: Deep blues (#2C3E50), teal accents (#1ABC9C), semantic colors (red for warnings, green for positive trends)
-  - Typography: Monospace for amounts and Ledger file previews; sans-serif (Inter/Roboto) for UI text
+  - Typography: Monospace for amounts and .hledger file previews; sans-serif (Inter/Roboto) for UI text
   - Tone: Professional, precise, empowering (not "Great job!" or "You're doing amazing!")
 
 - **Example:** Success message: "Imported 198 transactions" (not "Woohoo! You're on fire! 🔥")
@@ -165,12 +166,12 @@ These principles guide every design decision, interaction pattern, and visual tr
 - **Trust Signal:** Privacy-first users see zero network requests in DevTools
 
 #### 5. Portable by Default
-**Philosophy:** Export Ledger files with one click. No proprietary formats. If you outgrow Ledgerly, your data migrates seamlessly.
+**Philosophy:** Your .hledger files are already portable - copy them anywhere with one click. No proprietary formats, no export needed. If you outgrow Ledgerly, your data is already in standard hledger format.
 
 - **In Practice:**
-  - "Export Ledger File" button always visible (dashboard footer)
-  - Generated `.ledger` files pass `ledger -f file.dat bal` validation 100% of the time
-  - Settings show real-time Ledger file preview with syntax highlighting
+  - "Copy .hledger File" button always visible (dashboard footer)
+  - .hledger files pass `hledger check` validation 100% of the time (validated on every write)
+  - Settings show real-time .hledger file preview with syntax highlighting
   - No feature requires staying in Ledgerly (all data exportable)
 
 - **Competitive Differentiation:** Unlike YNAB (proprietary format), Fava (Beancount-only), or Mint (no export), Ledgerly treats exports as first-class feature
@@ -345,8 +346,10 @@ graph TD
     EditCategories --> LearningIndicator[Show: Ledgerly learns from corrections]
     LearningIndicator --> ClickImport2
 
-    ClickImport2 --> SaveToDB[Save transactions to SQLite]
-    SaveToDB --> UpdateRules[Update Import Rules table]
+    ClickImport2 --> WriteHledger[Write to .hledger file]
+    WriteHledger --> ValidateHledger[hledger check validates]
+    ValidateHledger --> CacheResults[Cache results in SQLite]
+    CacheResults --> UpdateRules[Update Import Rules table]
     UpdateRules --> Success[Success: Imported 198 transactions]
     Success --> RefreshDashboard[Dashboard auto-refreshes]
     RefreshDashboard --> End([Complete])
@@ -371,7 +374,7 @@ graph TD
 
 - **Duplicate scope:**
   - **Within-file:** Check each CSV for internal duplicates
-  - **Cross-file:** Check new transactions against ALL existing database transactions
+  - **Cross-file:** Check new transactions against ALL existing .hledger file transactions (via hledger query)
   - **Breakdown shown:** "23 duplicates (15 from previous imports, 8 across today's 3 files)"
 
 - **Transfer detection:** Cross-file duplicates with opposite amounts flagged as potential transfers: "Same transaction in Checking.csv and Savings.csv - Mark as Transfer?"

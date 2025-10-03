@@ -18,13 +18,14 @@ The Plain Text Accounting ecosystem (Ledger, hledger, beancount) provides powerf
 
 Meanwhile, mainstream finance apps (YNAB, Mint) offer ease-of-use at the cost of vendor lock-in, privacy invasion, and subscription costs ($99/year+). With Mint's 2024 shutdown displacing 20M users and growing privacy concerns (GDPR, CCPA, data breaches), there's a clear market opportunity for a privacy-respecting, locally-owned alternative.
 
-**Ledgerly** inverts traditional PTA architecture: **CSV bank statements become the source of truth**, while Ledger files are auto-generated artifacts. This paradigm shift—combined with dashboard-first UI, adaptive prediction logic, and progressive complexity disclosure—bridges the gap between powerful CLI tools and intuitive consumer apps. The solution targets frustrated CLI power users (15K-30K globally), PTA-curious technical users (100K-200K), and privacy-first enthusiasts (50K-100K) who value data control but lack time for CLI mastery.
+**Ledgerly** builds on the battle-tested hledger foundation: **plain text .hledger files remain the source of truth**, with embedded hledger binary handling all double-entry calculations. This PTA-authentic approach—combined with dashboard-first UI, CSV import automation, adaptive prediction logic, and progressive complexity disclosure—bridges the gap between powerful CLI tools and intuitive consumer apps. The solution targets frustrated CLI power users (15K-30K globally), PTA-curious technical users (100K-200K), and privacy-first enthusiasts (50K-100K) who value data control but lack time for CLI mastery.
 
 ### Change Log
 
 | Date       | Version | Description             | Author |
 |------------|---------|-------------------------|--------|
 | 2025-10-02 | 1.0     | Initial PRD creation    | John   |
+| 2025-10-03 | 2.0     | Architecture revision: hledger + Wolverine + VSA | John   |
 
 ## Requirements
 
@@ -68,11 +69,11 @@ Based on the Project Brief's MVP scope and target user workflows, here are the f
 
 **FR20:** The system shall alert users to predicted overdrafts or unusual spending patterns
 
-**FR21:** The system shall auto-generate valid Ledger-format files from the transaction database in real-time
+**FR21:** The system shall write transactions to .hledger plain text files using standard hledger format
 
-**FR23:** The system shall validate generated Ledger files for correctness (balances, account structure)
+**FR23:** The system shall validate all .hledger file writes using embedded hledger binary (`hledger check`)
 
-**FR24:** The system shall allow users to export Ledger files at any time
+**FR24:** The system shall allow users to manually edit .hledger files with external editors, detecting changes via FileSystemWatcher
 
 #### Phase 2 Requirements (Post-MVP)
 
@@ -82,7 +83,7 @@ Based on the Project Brief's MVP scope and target user workflows, here are the f
 
 **FR19:** The system shall provide confidence scoring for predictions based on historical consistency *(Deferred: Extends FR18; add after validating base predictions)*
 
-**FR22:** The system shall support manual editing of raw Ledger files with GUI re-import of changes *(Deferred: High complexity for file watching/conflict resolution; FR24 export provides escape hatch)*
+**FR22:** The system shall provide command palette interface for keyboard-driven power users *(Deferred: UI complexity; focus on core workflows first)*
 
 ### Non-Functional Requirements
 
@@ -98,9 +99,9 @@ Based on the Project Brief's MVP scope and target user workflows, here are the f
 
 **NFR6:** The system shall operate fully offline with no internet connection required for core functionality
 
-**NFR7:** The system shall store all data locally using SQLite with no mandatory cloud dependency
+**NFR7:** The system shall store all financial data as plain text .hledger files with SQLite used only for caching and app state
 
-**NFR8:** The system shall encrypt the local database at rest using user-provided password (sqlcipher) *(Phase 2: Add pre-launch if time permits)*
+**NFR8:** The system shall provide atomic writes to .hledger files (temp file → rename) with automatic .hledger.bak backups
 
 **NFR9:** The system shall achieve >95% CSV import success rate across common bank formats
 
@@ -112,9 +113,9 @@ Based on the Project Brief's MVP scope and target user workflows, here are the f
 
 **NFR13:** The system shall use no more than 500MB of memory during typical operation
 
-**NFR14:** The system shall validate all generated Ledger files pass `ledger -f file.dat bal` validation 100% of the time
+**NFR14:** The system shall validate all .hledger file writes pass `hledger check` validation 100% of the time
 
-**NFR15:** The system shall provide audit trails for all transaction modifications (edit history) *(Phase 2: Power user feature)*
+**NFR15:** The system shall use FileSystemWatcher to detect external .hledger edits and refresh UI within 1 second *(Phase 2: Power user feature)*
 
 ## User Interface Design Goals
 
@@ -131,7 +132,7 @@ Ledgerly bridges the **power of CLI tools** with the **intuitiveness of consumer
 
 **Design Philosophy:** "Show me my money, then let me explore" – Dashboard answers "where did my money go?" immediately, drill-downs answer "why?" on demand.
 
-**Competitive Positioning:** *"Ledger's power, YNAB's ease, your data"* – The only PTA tool with predictive analytics, beautiful interface, and complete data ownership.
+**Competitive Positioning:** *"hledger's power, YNAB's ease, your data"* – The only PTA tool using real hledger engine with predictive analytics, beautiful interface, and complete data ownership.
 
 ### Key Interaction Paradigms
 
@@ -259,37 +260,61 @@ From a product perspective, these are the critical screens necessary to deliver 
 
 Based on the Project Brief's technical preferences and architecture requirements, here are the technical assumptions for Ledgerly:
 
-### Repository Structure: Monorepo (with Polyrepo Consideration)
+### Repository Structure: Monorepo with Vertical Slice Architecture
 
-- **Initial Decision:** Single repository containing Angular frontend, .NET backend, and shared TypeScript/C# types
-- **Tooling:** Nx or Turborepo for monorepo management, workspace orchestration, and build caching
+- **Structure:** Single repository organized by feature slices (not layers)
+- **Organization Pattern:**
+  ```
+  src/
+    Ledgerly.Api/
+      Features/              # Vertical slices
+        ImportCsv/
+          ImportCsvCommand.cs
+          ImportCsvHandler.cs
+          ImportCsvEndpoint.cs
+          ImportCsvTests.cs
+        GetDashboard/
+        CategorizeTransaction/
+      Common/                # Shared kernel
+        Hledger/
+          HledgerBinaryManager.cs
+          HledgerProcessRunner.cs
+    Ledgerly.Web/           # Angular frontend
+    Ledgerly.Desktop/       # Tauri wrapper
+    Ledgerly.Contracts/     # Shared DTOs
+  ```
 - **Rationale:**
-  - Easier type safety across frontend/backend boundaries (shared DTOs, API contracts)
-  - Simplified CI/CD with single pipeline for coordinated releases
-  - Atomic commits for features spanning frontend and backend
-  - Better developer experience for solo founder (single checkout, unified tooling)
-- **Trade-off:** More complex initial setup vs. polyrepo; learning curve for Nx/Turborepo
-- **Alternative (Polyrepo for MVP Speed):**
-  - **Two separate repos:** `ledgerly-frontend` (Angular) + `ledgerly-backend` (.NET)
-  - **Type sharing:** Manual sync or publish shared types as internal npm package
-  - **Faster initial setup:** Skip monorepo tooling complexity; focus on features
-  - **Decision Point (Week 1):** If Nx/Turborepo setup takes >2 days, pivot to polyrepo for MVP; revisit monorepo in Phase 2 if type sync becomes painful
+  - Feature cohesion: All code for a feature together
+  - Solo developer friendly: Clear boundaries, easy navigation
+  - Parallel development: Features don't collide
+  - CQRS natural fit: Commands/queries explicit in each slice
+- **Trade-off:** Accept some code duplication vs. premature abstraction (Rule of Three applies)
 
-### Service Architecture: Monolith (Embedded Local Server)
+### Service Architecture: Event-Driven Monolith with Embedded hledger
 
-- **Decision:** .NET backend runs as embedded local server (localhost:5000) within Tauri desktop app wrapper
+- **Decision:** Event-driven .NET backend using Wolverine for messaging, embedded hledger binary for calculations
 - **Architecture Pattern:**
-  - **Frontend:** Angular SPA (Single Page Application) compiled to static assets
-  - **Backend:** ASP.NET Core Web API (REST or minimal APIs)
+  - **Frontend:** Angular SPA with Signals for reactivity
+  - **Backend:** ASP.NET Core + Wolverine (command/event handling)
+  - **Double-Entry Engine:** Embedded hledger binary (battle-tested, 20+ years)
+  - **Data Flow:**
+    ```
+    Angular UI → API → Wolverine Command
+                          ↓
+                    Write .hledger file
+                          ↓
+                    hledger binary (calc)
+                          ↓
+                    Parse output → Cache (SQLite) → UI
+    ```
   - **Desktop Wrapper:** Tauri (Rust-based, lighter than Electron)
-  - **Communication:** HTTP/HTTPS localhost calls from Angular → .NET API
-  - **Database:** SQLite embedded in .NET process
+  - **Storage:** .hledger plain text files (source of truth) + SQLite (caching only)
 - **Rationale:**
-  - **Offline-first:** No cloud dependency; everything runs locally (NFR6, NFR7)
-  - **Cross-platform:** Tauri handles OS packaging for Windows/macOS/Linux (NFR12)
-  - **Performance:** Native .NET backend faster than Node.js for CSV parsing, Ledger generation
-  - **Simplicity:** Monolithic architecture appropriate for MVP scope; avoids microservices complexity
-- **Phase 2 Consideration:** If cloud sync added, extract sync service as separate microservice; keep core local monolith
+  - **PTA-authentic:** Real hledger engine, not custom implementation
+  - **Event-driven:** Wolverine handles async workflows (import, categorization, analytics)
+  - **Offline-first:** Everything local, no cloud dependency (NFR6, NFR7)
+  - **Simplicity:** Simpler than full event sourcing; appropriate for desktop app
+- **Phase 2 Consideration:** Wolverine can extend to distributed if cloud sync needed
 
 ### Testing Requirements: Unit + Integration + Critical Path E2E
 
@@ -299,19 +324,19 @@ Based on the Project Brief's technical preferences and architecture requirements
     - Backend: .NET API controllers, business logic (xUnit or NUnit)
     - **Coverage Target:** 70%+ for core business logic (CSV import, categorization, Ledger generation)
   - **Integration Tests:**
-    - API endpoint tests (backend → SQLite database round-trips)
-    - Ledger file generation validation (FR23: generated files pass `ledger -f file.dat bal`)
-    - CSV import end-to-end (file → parsing → database → categorization → UI)
-    - **Database migration tests:** Validate schema upgrades from v1.0 → v1.1 with rollback capability
+    - Wolverine command/event handler tests with in-memory message bus
+    - hledger binary integration (FR23: validate writes pass `hledger check`)
+    - CSV import end-to-end (file → parsing → .hledger write → hledger calc → cache → UI)
+    - FileSystemWatcher tests for external .hledger edits
   - **E2E Tests (Critical Paths - Week 10):**
     - **REQUIRED for MVP:** Financial app trust requires automated critical path validation
     - **Tooling:** Playwright (cross-browser, cross-platform support)
     - **Critical paths to test:**
-      1. CSV import → Dashboard loads with correct data → Drill-down to category → Transaction list displays
-      2. Add manual transaction → Dashboard updates → Export Ledger file → Validate format
-      3. Edit transaction → Changes persist → Re-launch app → Data retained
-      4. Import CSV → Categorize transactions → Export Ledger → Re-import to CLI tool (validate round-trip)
-      5. Large dataset (1,000 transactions) → Dashboard loads <2 seconds (NFR1 validation)
+      1. CSV import → .hledger write → Dashboard loads with hledger data → Drill-down to category
+      2. Add manual transaction → .hledger append → Dashboard updates → hledger validates
+      3. Edit transaction → .hledger rewrite → Changes persist → Re-launch app → Data retained
+      4. External edit .hledger file → FileSystemWatcher detects → UI refreshes within 1s
+      5. Large dataset (1,000 transactions) → hledger calc → Dashboard loads <2 seconds (NFR1)
     - **Cross-platform:** Run E2E suite on Windows, macOS, Linux in CI/CD
   - **Manual Testing:**
     - UX flows (drag-drop, drill-downs) validated by developer
@@ -341,35 +366,44 @@ Based on the Project Brief's technical preferences and architecture requirements
 
 - **Framework:** .NET 8+ (ASP.NET Core Web API)
   - **Language:** C# 12 (nullable reference types, records for DTOs)
-  - **API Style:** Minimal APIs (lightweight) or Controller-based (structured)
-- **ORM:** Entity Framework Core 8+ for SQLite database access
-  - **Migrations:** Code-first migrations for schema versioning
+  - **Messaging:** Wolverine (command/event handling, local queues)
+  - **API Style:** Minimal APIs + Wolverine HTTP endpoints
+- **Architecture Pattern:** Vertical Slice Architecture (features self-contained)
+- **hledger Integration:**
+  - **Binary Management:** Embedded hledger binaries for Windows/macOS/Linux
+  - **Process Execution:** ProcessStartInfo for CLI invocation
+  - **Output Parsing:** JSON output (`hledger bal -O json`) + text parsing fallback
+  - **Validation:** `hledger check` after all .hledger writes
 - **CSV Parsing:** CsvHelper library (robust, well-maintained, handles edge cases)
-- **Ledger File Generation:**
-  - **Option 1:** Template-based generation (string interpolation, faster to implement)
-  - **Option 2:** libhledger FFI bindings (if available for .NET; ensures 100% compatibility)
-  - **Decision:** Start with template-based (Option 1); validate with integration tests against `ledger` CLI
+- **Caching:** SQLite with Entity Framework Core (app state only, NOT financial data)
 
-#### Database
+#### Data Storage Architecture
 
-- **Local Storage:** SQLite 3.40+ (embedded, zero-config)
-  - **Schema:**
-    - Tables: Transactions, Accounts, Categories, ImportRules, RecurringTransactions, SchemaVersion (tracks DB version for migrations)
-    - Indexes: Transaction date, payee, category (for fast filtering/search; critical for NFR3 performance)
-  - **Encryption:** sqlcipher integration (NFR8, Phase 2) – defer to pre-launch if time permits
+- **Financial Data (Source of Truth):**
+  - **Format:** Plain text .hledger files (standard hledger format)
+  - **Location:** User-selected directory (default: `~/Documents/Ledgerly/ledger.hledger`)
+  - **Structure:**
+    ```
+    ; Account declarations
+    account Assets:Checking
+    account Expenses:Groceries
+
+    2025-01-15 Whole Foods
+        Expenses:Groceries    $45.23
+        Assets:Checking
+    ```
+  - **File Operations:**
+    - Atomic writes (temp file → rename) to prevent corruption
+    - Automatic .hledger.bak backup before each write
+    - FileSystemWatcher for external editor detection
+- **Cache Layer (SQLite):**
+  - **Purpose:** Query performance, app state, NOT financial data
+  - **Tables:** DashboardCache, CategoryCache, PredictionCache, ImportRules, AppSettings
+  - **Invalidation:** Clear cache on .hledger file change (FileSystemWatcher trigger)
 - **Backup Strategy:**
-  - Manual: User-triggered "Backup Database" button (exports .db file)
-  - Automatic: Periodic snapshots to `~/.ledgerly/backups/` (daily or weekly)
-  - **Pre-migration automatic backup:** Before any schema migration, create timestamped backup
-- **Data Integrity:** Transaction-level ACID guarantees (SQLite default)
-- **Migration Strategy (Critical for Post-Launch Updates):**
-  - **Versioned Migrations:** Embed migration scripts in app (v1.0 → v1.1 → v1.2 chain)
-  - **SchemaVersion Table:** Tracks current database version; app validates on startup
-  - **Forward-only Migrations:** Each app version knows how to upgrade from all previous versions
-  - **Rollback on Failure:** If migration fails, restore from automatic pre-migration backup; notify user
-  - **Migration Testing:** Integration tests validate upgrades from mock v1.0 DB to current schema
-  - **User Experience:** Show progress dialog during migration ("Upgrading database from v1.0 to v1.1...")
-  - **Skip-Version Support:** User upgrading from v1.0 → v1.5 runs migrations v1.0→v1.1→v1.2→...→v1.5 sequentially
+  - Automatic .hledger.bak on each write
+  - User-triggered "Backup to..." (copy .hledger to any location)
+  - Git integration encouraged (plain text = version controllable)
 
 #### Desktop Wrapper
 
@@ -379,10 +413,10 @@ Based on the Project Brief's technical preferences and architecture requirements
   - **Trade-off:** Less mature ecosystem vs. Electron, but proven for production apps (e.g., Warp terminal, Logseq)
   - **CRITICAL: Week 1 Validation Required**
     - Build proof-of-concept Tauri app testing:
-      1. SQLite file read/write operations
-      2. File system access (CSV import, Ledger export)
+      1. .hledger file read/write operations (atomic writes, FileSystemWatcher)
+      2. hledger binary execution (ProcessStartInfo, output capture)
       3. Cross-platform builds (Windows .exe, macOS .dmg, Linux .AppImage)
-    - **Decision Point (End of Week 1):** If Tauri blockers found (e.g., SQLite locking issues, file system permissions), pivot to Electron
+    - **Decision Point (End of Week 1):** If Tauri blockers found (e.g., process spawning issues, file permissions), pivot to Electron
 - **Fallback Plan:** Electron (widely proven, larger bundle acceptable)
   - Add 1 week to timeline for Electron migration if Tauri validation fails
   - Bundle size trade-off: 100MB download acceptable if stability prioritized
@@ -391,7 +425,8 @@ Based on the Project Brief's technical preferences and architecture requirements
 
 - **Frontend:** npm or pnpm (faster lockfile resolution)
 - **Backend:** NuGet for .NET packages
-- **Monorepo:** Nx handles cross-workspace dependencies (e.g., shared types between Angular and .NET)
+  - **Key Dependencies:** WolverineFx, WolverineFx.Http, CsvHelper, EF Core
+- **hledger Binaries:** Bundled in app resources (Windows/macOS/Linux versions)
 
 #### CI/CD Pipeline
 
@@ -415,24 +450,28 @@ Based on the Project Brief's technical preferences and architecture requirements
 
 #### Performance Assumptions
 
-- **SQLite Performance:** Adequate for 5,000-10,000 transactions initially; validate scaling to 50,000+ for power users
-  - **Optimization:** Indexes on frequently queried columns (date, category, account, payee)
-  - **Week 6 Validation:** Create test database with 50,000 transactions; validate NFR1-NFR3 performance targets
-  - **Mitigation:** If performance issues found, optimize queries using `EXPLAIN QUERY PLAN`, add pagination, or implement virtual scrolling
-- **CSV Import Speed:** CsvHelper + .NET should handle 1,000 transactions <5 seconds (NFR2)
-  - **Async Processing:** Import runs in background thread; progress bar shown to user
-- **Dashboard Load Time:** Chart.js rendering + SQLite queries should meet <2 second target (NFR1)
-  - **Lazy Loading:** Load dashboard widgets on-demand (e.g., Cash Flow Timeline only when visible)
-  - **Caching:** Dashboard data cached; refresh on data changes only
+- **hledger Performance:** Typical queries <1 second for 5,000-10,000 transactions
+  - **Optimization:** Leverage hledger's built-in performance (20+ years optimized)
+  - **Week 6 Validation:** Test .hledger file with 50,000 transactions; validate NFR1-NFR3 targets
+  - **Mitigation:** If slow, use hledger's JSON output + aggressive SQLite caching
+- **CSV Import Speed:** CsvHelper parsing + .hledger append <5 seconds for 1,000 transactions (NFR2)
+  - **Async Processing:** Wolverine handles async commands; progress updates via SignalR
+- **Dashboard Load Time:** hledger calc + Chart.js rendering <2 seconds (NFR1)
+  - **Caching Strategy:** SQLite caches hledger output; invalidate on .hledger changes
+  - **Lazy Loading:** Dashboard widgets load on-demand
 
-#### Ledger File Format Support
+#### hledger File Format Support
 
-- **Primary Format:** Ledger (most widely used in PTA community)
-- **Secondary Formats:** hledger, beancount (Phase 2 – if demand validated in MVP)
-- **Format Detection:** User selects format in Settings; default to Ledger
+- **Primary Format:** hledger (embedded binary, battle-tested)
+- **Compatibility:** hledger files work with Ledger/beancount via conversion tools
+- **File Structure:**
+  - Account declarations at top
+  - Transactions in chronological order
+  - 2-space indentation, aligned amounts
+  - ISO dates (YYYY-MM-DD)
 - **Validation Strategy:**
-  - Integration tests run `ledger -f generated.dat bal` to verify output (NFR14)
-  - Collect sample ledger files from community (anonymized) to test edge cases
+  - All writes validated via `hledger check` (NFR14)
+  - Collect 50+ community .hledger files for edge case testing (Week 2)
 
 #### Third-Party Integrations (MVP Scope)
 
@@ -444,217 +483,229 @@ Based on the Project Brief's technical preferences and architecture requirements
 
 ## Epic List
 
-Based on requirements analysis and stakeholder feedback, here are the high-level epics for Ledgerly MVP:
+Based on Vertical Slice Architecture from brief, here are the high-level epics organized by feature slices:
 
 ### Epic 1: Foundation & Core Infrastructure
-**Goal:** Establish project setup, cross-platform desktop app, local database, and basic transaction data model with a simple transaction list view to validate the full stack works end-to-end.
+**Goal:** Establish Wolverine + hledger + Tauri integration with VSA folder structure and basic .hledger file operations to validate full stack end-to-end.
 
 **Key Deliverables:**
-- Tauri (or Electron fallback) + .NET + Angular + SQLite integration
-- Testing infrastructure setup (xUnit, Jasmine, Playwright stubs)
-- Simple transaction list UI displaying seed data (validates full stack)
-- Cross-platform builds (Windows, macOS, Linux)
+- Tauri + .NET + Wolverine + Angular integration
+- VSA folder structure (Features/ + Common/Hledger/)
+- Embedded hledger binary management (extract, permissions, SHA256 verify)
+- Basic .hledger read/write with atomic operations
+- Testing infrastructure (xUnit, Wolverine test harness, Playwright stubs)
+- Simple UI displaying hledger balance output
 
-**Success Criteria:** Desktop app launches on all platforms, displays 10 seed transactions from SQLite, passes smoke test
+**Success Criteria:** Desktop app launches on all platforms, executes `hledger bal`, displays results in UI, writes test transaction to .hledger file
 
 ---
 
-### Epic 2: CSV Import & Smart Data Entry
-**Goal:** Enable users to import bank CSV files with intelligent column detection, manual mapping fallback, duplicate detection, and category suggestion rules – the gateway to all value in Ledgerly.
+### Epic 2: Import CSV Vertical Slice (P0 - Foundation)
+**Goal:** Build complete CSV import feature as first vertical slice - parse CSV, generate hledger syntax, append to .hledger file with Wolverine async handling.
 
 **Key Deliverables:**
-- CSV drag-drop upload (FR1)
-- Automatic column detection (FR2) and manual mapping UI (FR3)
-- Duplicate transaction detection and warnings (FR4)
-- Category suggestion engine based on rules (FR6)
-- CSV import preview and confirmation flow
-- **Test Data Collection:** Gather 20+ bank CSV formats before development starts
+- ImportCsvCommand + Handler + Endpoint (Wolverine)
+- CSV column detection and manual mapping (FR2, FR3)
+- hledger transaction formatter (proper syntax, 2-space indent, aligned amounts)
+- Atomic .hledger file append with .bak backup
+- Duplicate detection hashing (FR4)
+- Category suggestion engine via ImportRules (FR6)
+- **Test Data:** 20+ bank CSV formats collected (Week 2)
 
-**Success Criteria:** Import 3 different bank CSVs with >90% column auto-detection; category suggestions achieve >50% accuracy
+**Success Criteria:** Import 3 different bank CSVs → valid .hledger file → `hledger check` passes → transactions visible in CLI
 
-**Deferred to Phase 2:** Payee normalization (FR5), ML-based learning categorization (FR7)
+**Deferred to Phase 2:** Payee normalization (FR5), ML categorization learning (FR7)
 
 ---
 
-### Epic 3: Dashboard & Interactive Visualizations
-**Goal:** Build the dashboard-first UI with net worth summary, expense breakdowns, income vs. expense charts, and drill-down navigation – delivering instant financial insights.
+### Epic 3: Get Dashboard Vertical Slice (P0 - Core Value)
+**Goal:** Build dashboard query slice - call hledger for calculations, cache results, display interactive visualizations showing financial insights.
 
 **Key Deliverables:**
-- Dashboard landing page with widgets (FR8)
-- Net worth summary, expense breakdown (pie chart), income vs. expense (bar chart)
-- Recent transactions list widget
-- Drill-down navigation to category details (FR9)
-- **Cash Flow Timeline widget (prominent placement)** – predictions from Epic 5
-- Quick actions: Import CSV, Add Transaction
-- **Performance Testing:** Validate dashboard loads <2 seconds with 5,000 transactions (NFR1)
+- GetDashboardQuery + Handler (Wolverine)
+- hledger query execution (`hledger bal -O json`, `hledger reg`)
+- Output parsing (JSON → C# objects)
+- SQLite caching layer with invalidation on .hledger changes
+- Dashboard widgets: Net worth, expense breakdown (Chart.js), income vs expense
+- Drill-down navigation (FR9)
+- **FileSystemWatcher:** Detect .hledger changes → invalidate cache → refresh UI
+- **Performance Test:** 5,000 transaction .hledger file → <2s dashboard load (NFR1)
 
-**Success Criteria:** User can answer "where did my money go this month?" within 10 seconds of opening app
+**Success Criteria:** Dashboard shows accurate hledger data within 2 seconds; external .hledger edits trigger UI refresh within 1 second
 
 ---
 
-### Epic 4: Transaction Management (Basic CRUD)
-**Goal:** Implement core transaction management operations enabling users to add, edit, and delete transactions through an intuitive interface.
+### Epic 4: Manage Transactions Vertical Slice (P0 - Essential)
+**Goal:** Implement transaction CRUD operations - add/edit/delete via commands that rewrite .hledger file maintaining proper formatting.
 
 **Key Deliverables:**
-- Add transaction form with validation (FR10)
-- Edit/delete transactions with confirmation
-- Auto-complete for payees and categories (FR13)
-- Batch operations (select multiple → categorize, delete)
-- Transaction search and filtering
+- AddTransactionCommand + Handler (append to .hledger)
+- EditTransactionCommand + Handler (rewrite .hledger file)
+- DeleteTransactionCommand + Handler (comment out in .hledger)
+- GetTransactionHistoryQuery + Handler (parse hledger reg output)
+- .hledger file rewrite strategy (read → modify → atomic write)
+- Transaction search/filter UI (FR10)
+- Auto-complete for payees/categories from .hledger file (FR13)
 
-**Success Criteria:** Adding/editing a transaction takes <30 seconds; auto-complete works for previously-used payees
+**Success Criteria:** Add/edit/delete transaction → .hledger updated → `hledger check` validates → dashboard refreshes automatically
 
-**Deferred to Phase 2:** Split transactions (FR11), transfer handling (FR12) – both add significant complexity; defer to focus on core workflows
+**Deferred to Phase 2:** Split transactions (FR11), transfer handling (FR12)
 
 ---
 
-### Epic 5: Predictive Analytics & Cash Flow (Simplified & Time-Boxed)
-**Goal:** Add recurring transaction detection and cash flow timeline predictions – the unique differentiator that shows users where their money is going.
+### Epic 5: Detect Recurring Vertical Slice (P1 - Delight)
+**Goal:** Build recurring transaction detection and prediction slice - analyze hledger data for patterns, generate cash flow timeline (unique differentiator).
 
 **Key Deliverables:**
-- Recurring transaction detection for monthly patterns (FR17) – >80% accuracy target
-- Cash flow timeline showing predicted balance 30-90 days (FR18)
+- DetectRecurringCommand + Handler (Wolverine scheduled job, nightly)
+- Pattern detection algorithm (same payee, ±10% amount, ±5 days monthly)
+- RecurringTransactions cache (SQLite)
+- PredictCashFlowQuery + Handler (project balance 30-90 days)
+- Cash Flow Timeline widget on dashboard (prominent placement)
 - Overdraft/unusual spending alerts (FR20)
-- **Labeled Test Data:** Create test dataset for validation before development
+- **Test Dataset:** 100+ labeled transactions (50 recurring, 50 non-recurring)
 
-**Success Criteria:** Detect 80%+ of monthly recurring transactions; cash flow predictions within 10% accuracy for 30-day forecast
+**Success Criteria:** 80%+ recurring detection accuracy; predictions within 10% for 30-day forecast
 
-**Simplified for MVP:** Focus on monthly recurring patterns only; defer bi-weekly, quarterly, and confidence scoring (FR19) to Phase 2
-
-**Time-Box:** 1.5 weeks maximum; if incomplete, defer advanced features to Phase 2
+**Time-Box:** 1.5 weeks; defer confidence scoring (FR19) to Phase 2
 
 ---
 
-### Epic 6: Ledger File Generation & PTA Integration (80% Use Case)
-**Goal:** Auto-generate valid Ledger-format files in real-time, provide export functionality, and validate compatibility with CLI tools – maintaining PTA transparency and trust.
+### Epic 6: Categorize Transaction Vertical Slice (P1 - High Value)
+**Goal:** Build categorization slice - auto-suggest categories, learn from corrections, batch operations via Wolverine commands.
 
 **Key Deliverables:**
-- Real-time Ledger file generation from transaction database (FR21)
-- Export Ledger files (FR24)
-- Validation against Ledger CLI (FR23) – target 80% use case coverage
-- **Test File Collection (Start Week 2):** Gather 50+ anonymized community Ledger files for validation
-- Format selection (Ledger primary; hledger/beancount Phase 2)
+- CategorizeTransactionCommand + Handler
+- Auto-suggest engine (match payee against ImportRules in SQLite)
+- Batch categorization support (multiple transactions)
+- Learning mechanism (user correction → update ImportRules)
+- Confidence scoring (simple: exact match = high, partial = medium)
+- Pattern matching (keyword-based, not ML for MVP)
 
-**Success Criteria:** Generated files pass `ledger -f file.dat bal` validation for simple transactions; documented unsupported edge cases
+**Success Criteria:** >50% categorization accuracy on first import; >70% after 3 corrections
 
-**Adjusted Goal (80% Coverage Acceptable for MVP):** Focus on simple transactions (no multi-currency, virtual postings, or lot tracking); defer complex edge cases to Phase 2
+**Deferred to Phase 2:** ML-based learning (FR7), advanced pattern matching
 
 ---
 
-### Epic 7: Reporting & Data Export (Optional - P1)
-**Goal:** Create category-based reports with time period filtering, comparison views, and PDF/CSV export capabilities – empowering users to analyze and share financial data.
+### Epic 7: Category Reports Vertical Slice (P1 - Core Value)
+**Goal:** Build reporting slice - query hledger for category breakdowns, time period filtering, comparison views, PDF/CSV export.
 
 **Key Deliverables:**
-- Category-based expense/income reports (FR14)
-- Time period filtering and comparison views (FR15)
-- PDF and CSV export (FR16)
+- GetCategoryReportQuery + Handler (call `hledger bal -O json` with date filters)
+- Time period filtering (month, quarter, year, custom range)
+- Comparison views (this month vs last month, YoY)
+- Drill-down to transactions by category (reuse GetTransactionHistory)
+- PDF export (jsPDF) and CSV export
+- Interactive Chart.js visualizations
 
-**Success Criteria:** Generate category expense report for any time period in <5 seconds; exports are well-formatted
+**Success Criteria:** Category report generated in <5 seconds; drill-down to transactions works; PDF/CSV export well-formatted
 
-**Optional for MVP:** If timeline slips, cut this epic – users can export Ledger files (Epic 6) and use CLI tools for custom reports
+**Optional for MVP:** If timeline slips, cut this epic – users can use hledger CLI for reports
 
 ---
 
-### Epic Sequencing & Timeline
+### Epic Sequencing & Timeline (VSA-Based)
 
-**Total Duration:** 12 weeks with buffer strategy
+**Total Duration:** 12 weeks following VSA feature slice approach
 
 | Week | Epic | Notes |
 |------|------|-------|
-| 1 | Epic 1: Foundation | Tauri validation, project setup, simple UI |
-| 2-3 | Epic 2: CSV Import | **Parallel: Start Epic 6 test file collection** |
-| 4 | Epic 3: Dashboard | Include 5K transaction performance test |
-| 5-6 | Epic 4: Transaction CRUD (Basic) | Week 6: Performance validation with 50K dataset |
-| 7-8 | Epic 6: Ledger Generation | Use collected test files from Week 2 |
-| 9-10 | Epic 5: Predictions (1.5 wks) + Epic 7: Reporting (0.5 wks) | **Buffer: Cut Epic 7 if Epic 5 takes 2 weeks** |
-| 11-12 | E2E Testing, Bug Fixes, Polish | Cross-platform validation, performance optimization |
+| 1 | Epic 1: Foundation | Wolverine + hledger + Tauri PoC; VSA structure |
+| 2-3 | Epic 2: Import CSV Slice | First complete vertical slice; collect 20+ CSV formats |
+| 4 | Epic 3: Dashboard Slice | hledger queries + caching + FileSystemWatcher |
+| 5-6 | Epic 4: Transaction CRUD Slice | .hledger rewrite strategy; 50K perf test Week 6 |
+| 7-8 | Epic 6: Categorize Slice | Auto-suggest + learning rules |
+| 9-10 | Epic 5: Predictions Slice (1.5 wks) + Epic 7: Reports (0.5 wks) | **Buffer: Cut Epic 7 if needed** |
+| 11-12 | E2E Testing, Polish, Package | Playwright critical paths; cross-platform builds |
 
-**Critical Path:** Epics 1 → 2 → 3 → 6 (Foundation → Import → Dashboard → Ledger) = 8 weeks
-**Differentiators:** Epic 5 (Predictions) time-boxed; Epic 7 (Reporting) optional
+**Critical Path (VSA):** Epics 1 → 2 → 3 → 4 (Foundation → Import → Dashboard → CRUD) = 6 weeks
+**Differentiators:** Epic 5 (Predictions) time-boxed; Epic 7 (Reports) optional
 
-**Parallelization Opportunities:**
-- Week 2: Collect Ledger test files while building CSV import
-- Week 6: Performance validation (50K transactions) while completing Epic 4
+**VSA Benefits:**
+- Each epic is complete feature (backend + frontend + tests)
+- No "backend weeks" then "frontend weeks" - features ship incrementally
+- Testing flows through each slice, not deferred to end
 
-**Cross-Cutting Concerns (Flow Through All Epics):**
-- Unit and integration testing (not isolated to final stories)
-- Performance optimization (validated in-epic, not deferred to Week 12)
-- Cross-platform compatibility (tested throughout, not just at end)
+**Parallelization:**
+- Week 2: Collect .hledger test files (50+) while building Import slice
+- All epics include unit + integration tests co-located with feature
 
 ## Epic Details
 
 ### Epic 1: Foundation & Core Infrastructure
 
-**Epic Goal:** Establish project setup, cross-platform desktop app, local database, and basic transaction data model with a simple transaction list view to validate the full stack works end-to-end.
+**Epic Goal:** Establish Wolverine + hledger + Tauri integration with VSA folder structure and basic .hledger file operations to validate full stack end-to-end.
 
-#### Story 1.1: Set Up Development Environment and Monorepo
-
-**As a** developer,
-**I want** the project repository initialized with Angular, .NET, and Tauri integrated,
-**so that** I can start building features on a solid technical foundation.
-
-**Acceptance Criteria:**
-1. Monorepo (Nx or Turborepo) created with workspaces for Angular frontend and .NET backend, OR polyrepo created if monorepo setup exceeds 2 days
-2. Angular 16+ project initialized with standalone components and Signals enabled
-3. .NET 8+ Web API project created with Entity Framework Core and SQLite configured
-4. Tauri 1.5+ wrapper integrated with Angular frontend serving as WebView content
-5. Cross-platform build scripts configured (Windows .exe, macOS .dmg, Linux .AppImage)
-6. GitHub repository initialized with .gitignore, README, and basic project structure documentation
-
-#### Story 1.2: Validate Tauri Cross-Platform Functionality
+#### Story 1.1: Set Up VSA Project Structure with Wolverine
 
 **As a** developer,
-**I want** to validate Tauri works correctly on Windows, macOS, and Linux,
-**so that** I can confidently proceed with Tauri or pivot to Electron if blockers are found.
+**I want** the project repository initialized with VSA folder structure, Wolverine, and hledger integration,
+**so that** I can build feature slices on a solid event-driven foundation.
 
 **Acceptance Criteria:**
-1. Proof-of-concept Tauri app successfully reads and writes SQLite database file on all three platforms
-2. File system access tested (CSV file read, Ledger file write) on all platforms
-3. Cross-platform builds successfully generated (Windows .exe, macOS .dmg, Linux .AppImage)
-4. Decision documented by end of Week 1: Proceed with Tauri OR pivot to Electron (add 1 week to timeline if pivot)
-5. If Tauri blockers found (e.g., SQLite locking on macOS, file permissions on Linux), Electron fallback initiated
+1. Monorepo created with VSA structure: `Features/`, `Common/Hledger/`, `Ledgerly.Web/`, `Ledgerly.Desktop/`, `Ledgerly.Contracts/`
+2. Angular 16+ project initialized with Signals and standalone components
+3. .NET 8+ Web API project created with Wolverine configured (WolverineFx, WolverineFx.Http)
+4. Tauri 1.5+ wrapper integrated with Angular frontend
+5. SQLite configured for caching only (NOT financial data)
+6. GitHub repository initialized with .gitignore, README, VSA documentation
 
-#### Story 1.3: Set Up Testing Infrastructure
+#### Story 1.2: Integrate and Validate hledger Binary
 
 **As a** developer,
-**I want** testing frameworks configured for unit, integration, and E2E tests,
-**so that** I can write tests throughout development, not defer to final weeks.
+**I want** to embed hledger binary and validate process execution works cross-platform,
+**so that** I can confidently use hledger for all double-entry calculations.
 
 **Acceptance Criteria:**
-1. Frontend: Jasmine/Karma or Jest configured for Angular unit tests
-2. Backend: xUnit or NUnit configured for .NET unit tests with sample test passing
-3. Integration: Test project created for API → SQLite round-trip tests
-4. E2E: Playwright stubs initialized (full E2E suite in Week 10, but framework ready)
-5. CI/CD pipeline (GitHub Actions) configured to run unit tests on push
-6. Test coverage reporting enabled (target: 70%+ for core logic)
+1. hledger binaries downloaded for Windows, macOS, Linux (from hledger.org)
+2. HledgerBinaryManager.cs extracts binaries to app resources, sets permissions, SHA256 verifies
+3. HledgerProcessRunner.cs executes `hledger --version` successfully on all platforms
+4. Test executes `hledger bal -f test.hledger` and parses output
+5. Cross-platform builds validated (Windows .exe, macOS .dmg, Linux .AppImage)
+6. Decision by end of Week 1: Proceed with Tauri OR pivot to Electron if process spawning issues found
 
-#### Story 1.4: Create Core Transaction Data Model
+#### Story 1.3: Set Up Wolverine Test Harness and Testing Infrastructure
 
 **As a** developer,
-**I want** the database schema and entity models defined for transactions, accounts, and categories,
-**so that** I can store and retrieve financial data.
+**I want** Wolverine test harness and testing frameworks configured,
+**so that** I can test command/query handlers with in-memory message bus.
 
 **Acceptance Criteria:**
-1. SQLite database schema created with tables: Transactions, Accounts, Categories, ImportRules, RecurringTransactions, SchemaVersion
-2. Entity Framework Core models defined with relationships (Transaction belongs to Account and Category)
-3. Database indexes created on frequently queried columns: date, payee, category, account
-4. Seed data script creates 10 sample transactions for testing
-5. Migration strategy implemented: SchemaVersion table tracks DB version, versioned migration scripts embedded
-6. Integration test validates CRUD operations on Transactions table
+1. Wolverine test harness configured with in-memory message bus
+2. xUnit configured for .NET with sample Wolverine handler test passing
+3. Frontend: Jest configured for Angular unit tests (Signals support)
+4. Integration tests: hledger binary execution + .hledger file validation
+5. E2E: Playwright stubs initialized (full suite Week 10)
+6. CI/CD (GitHub Actions) runs unit tests on push; coverage reporting enabled (70%+ target)
 
-#### Story 1.5: Build Simple Transaction List UI
+#### Story 1.4: Build hledger File Writer and Atomic Operations
+
+**As a** developer,
+**I want** atomic .hledger file write operations with backups,
+**so that** financial data is never corrupted or lost.
+
+**Acceptance Criteria:**
+1. TransactionFormatter.cs generates valid hledger syntax (2-space indent, aligned amounts, ISO dates)
+2. Atomic write strategy: Write to temp file → validate with `hledger check` → rename to .hledger
+3. Automatic .hledger.bak backup created before each write
+4. HledgerFileWriter.cs handles account declarations at top of file
+5. Integration test: Write transaction → `hledger check` passes → read back with `hledger reg`
+6. Error handling: If `hledger check` fails, restore .bak file and surface error to user
+
+#### Story 1.5: Build Simple hledger Balance Display UI
 
 **As a** user,
-**I want** to see a list of transactions when I open the app,
-**so that** I can verify the full stack is working (frontend → backend → database).
+**I want** to see hledger balance output when I open the app,
+**so that** I can verify the full stack is working (Angular → API → Wolverine → hledger).
 
 **Acceptance Criteria:**
-1. Angular component displays transaction list in a table (date, payee, amount, category)
-2. API endpoint `/api/transactions` returns JSON array of transactions from SQLite
-3. Seed data (10 transactions from Story 1.4) displayed in UI when app launches
-4. Table is sortable by date (ascending/descending)
-5. Basic styling applied (Angular Material table component)
-6. Cross-platform smoke test: App launches on Windows, macOS, Linux and displays transaction list
+1. Create test .hledger file with 5 sample transactions (seed data)
+2. GetBalanceQuery + Handler calls `hledger bal -O json` and parses output
+3. Angular component displays balance tree (accounts with amounts)
+4. API endpoint uses Wolverine HTTP endpoint pattern
+5. Basic styling with Angular Material
+6. Cross-platform smoke test: App launches, executes hledger, displays balances on Windows/macOS/Linux
 
 ---
 
@@ -1137,12 +1188,25 @@ Review the [UI Design Goals](#user-interface-design-goals) section and create wi
 
 ### Architect Prompt
 
-Review the [Technical Assumptions](#technical-assumptions) section and design the system architecture for Ledgerly. Key focus areas:
+Review the [Technical Assumptions](#technical-assumptions) section and design the system architecture for Ledgerly using **Vertical Slice Architecture + Wolverine + embedded hledger**. Key focus areas:
 
-1. **Week 1 Validation:** Execute Tauri proof-of-concept (SQLite read/write, file system access, cross-platform builds) - decide Tauri vs. Electron by end of Week 1
-2. **Data Model:** Refine the schema from Story 1.4 (Transactions, Accounts, Categories, ImportRules, RecurringTransactions, SchemaVersion tables)
-3. **API Contracts:** Define DTOs and endpoints for all 30+ stories (see acceptance criteria for endpoint paths)
-4. **Ledger Generation Engine:** Design template-based Ledger file generator with 2-space indentation, amount alignment, ISO dates
-5. **Performance Strategy:** Plan for NFR1-NFR5 targets (dashboard <2s, CSV import <5s, 60fps UI)
+1. **Week 1 Validation:**
+   - Execute Tauri PoC (hledger binary execution, .hledger file I/O, cross-platform builds)
+   - Decide Tauri vs. Electron by end of Week 1 based on process spawning results
+2. **VSA Structure:**
+   - Design feature slice organization (`Features/ImportCsv/`, `Features/GetDashboard/`, etc.)
+   - Define shared kernel boundaries (`Common/Hledger/`, `Common/FileSystem/`)
+3. **Wolverine Integration:**
+   - Design command/query handlers for each feature slice
+   - Plan async processing (CSV import, recurring detection scheduled job)
+4. **hledger Integration:**
+   - Design HledgerProcessRunner for CLI invocation
+   - Plan JSON output parsing (`hledger bal -O json`) + text parsing fallback
+   - Design caching strategy (SQLite) with FileSystemWatcher invalidation
+5. **Data Flow:**
+   - UI → Wolverine Command → Write .hledger → hledger calc → Cache → UI
+   - Atomic writes (temp → validate → rename) with .bak backups
+6. **Performance Strategy:**
+   - Plan for hledger <1s queries, dashboard <2s load, aggressive caching
 
-Start with Epic 1 (Foundation & Core Infrastructure) and ensure the full stack is validated end-to-end before proceeding to Epic 2.
+Start with Epic 1 to validate: Wolverine message bus → hledger binary execution → .hledger file write → UI display
