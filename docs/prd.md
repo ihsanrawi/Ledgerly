@@ -85,6 +85,8 @@ Based on the Project Brief's MVP scope and target user workflows, here are the f
 
 **FR22:** The system shall provide command palette interface for keyboard-driven power users *(Deferred: UI complexity; focus on core workflows first)*
 
+**FR25:** The system shall support multi-user read-only access for household members (Persona 3) *(Deferred to Phase 2: Requires authentication, authorization, and role-based UI; MVP focuses on solo power-user workflows)*
+
 ### Non-Functional Requirements
 
 **NFR1:** The system shall load the dashboard in <2 seconds for databases containing up to 5,000 transactions

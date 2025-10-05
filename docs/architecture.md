@@ -227,10 +227,9 @@ BankCsvAdapter interface with concrete implementations (ChaseAdapter, BofAAdapte
 | **PDF Generation** | jsPDF | 2.5.1 | Report PDF export | Client-side PDF generation, Chart.js integration, no server dependency (FR16) |
 | **Date/Time** | Luxon | 3.4.4 | Transaction date parsing | Timezone-safe, immutable, ISO 8601 support, successor to Moment.js |
 | **ORM** | Entity Framework Core | 8.0.4 | SQLite data access | Code-first migrations, LINQ queries, change tracking for cache invalidation |
-| **Database** | SQLite | 3.45.1 | Local caching only | Serverless, cross-platform, perfect for desktop apps, NOT for financial data (only cache) |
-| **Database Encryption** | SQLCipher | 4.5.6 | Encrypted SQLite | AES-256 encryption at rest, seamless EF Core integration, privacy-first positioning |
+| **Database** | SQLite | 3.45.1 (via better-sqlite3 9.x) | Local caching only | Serverless, cross-platform, perfect for desktop apps, NOT for financial data (only cache). No encryption in MVP—aligns with plaintext .hledger PTA philosophy. Phase 2 may add full-disk encryption. |
 | **CSV Parsing** | CsvHelper | 30.0.1 | Bank CSV import | 50M+ downloads, handles encoding/delimiters/edge cases, excellent error handling |
-| **Double-Entry Engine** | hledger | 1.32.3 | Accounting calculations | Battle-tested (20+ years Ledger lineage), PTA community standard, JSON output support |
+| **Double-Entry Engine** | hledger | 1.32.3 (embedded binary) | Accounting calculations | Battle-tested (20+ years Ledger lineage), PTA community standard, JSON output support. Distributed as separate subprocess (GPL-compliant, no linking). |
 | **File Watching** | FileSystemWatcher | Built-in .NET | Detect external .hledger edits | Native .NET, cross-platform, triggers cache invalidation |
 | **Validation** | FluentValidation | 11.9.1 | Input validation | Expressive syntax, testable, separates validation from domain logic |
 | **Testing - Backend Unit** | xUnit | 2.7.0 | .NET unit tests | Modern, async-friendly, parameterized tests, popular in .NET community |
@@ -2121,14 +2120,17 @@ if (!await ValidateDatabaseIntegrity())
 
 **Auth Method:** None for MVP (desktop app, single-user, Tauri security boundary)
 
-**Future (Phase 2 - Cloud Sync):**
-- OAuth 2.0 / OpenID Connect for cloud services
-- JWT tokens for API authentication
-- Role-based access control (RBAC) for multi-user scenarios
+**Rationale:** MVP targets solo power-users (Persona 1). Multi-user read-only access for household members (Persona 3) deferred to Phase 2.
+
+**Future (Phase 2 - Multi-User Support):**
+- Local authentication (PIN/password) for household member read-only access
+- Role-based authorization (Editor vs. Viewer roles)
+- Read-only UI mode for non-technical users
+- OAuth 2.0 / OpenID Connect for cloud sync services
 
 **Required Patterns (MVP):**
 - File system permissions check before .hledger access
-- SQLite database file encrypted with SQLCipher
+- SQLite cache unencrypted (aligns with plaintext .hledger PTA philosophy)
 - No network requests (except update check) - offline-first
 
 ### Secrets Management
@@ -2166,15 +2168,19 @@ if (!await ValidateDatabaseIntegrity())
 ### Data Protection
 
 **Encryption at Rest:**
-- **SQLite Database:** SQLCipher AES-256 encryption
-- **.hledger Files:** Plain text (user's choice to encrypt with git-crypt, VeraCrypt, etc.)
+- **SQLite Cache:** Unencrypted in MVP (aligns with plaintext .hledger PTA philosophy)
+- **.hledger Files:** Plain text (PTA requirement; user's choice to encrypt with git-crypt, VeraCrypt, BitLocker, etc.)
+- **.hledger.bak Files:** Plain text backups (consistent with source files)
+
+**Rationale:** PTA tools prioritize transparency and interoperability. .hledger files must be readable by CLI tools. Encrypting only SQLite cache (but not .hledger files) creates security inconsistency. Phase 2 may add full-disk encryption option (all files encrypted).
 
 **Encryption in Transit:** Not applicable (no network transmission of financial data in MVP)
 
 **PII Handling:**
-- Payee names: User financial data - encrypted in SQLite, plain text in .hledger
-- Transaction memos: Treated as sensitive - encrypted in SQLite
+- Payee names: User financial data - plaintext in SQLite cache and .hledger files
+- Transaction memos: Treated as sensitive - plaintext (PTA requirement)
 - No external transmission: All data stays local
+- User responsibility: Filesystem encryption (OS-level) recommended for sensitive data
 
 **Logging Restrictions:**
 - Never log: Full file paths (use filename only)
@@ -2195,9 +2201,19 @@ if (!await ValidateDatabaseIntegrity())
 **Approval Process:**
 - All new dependencies must be reviewed for:
   - Known vulnerabilities (CVE database)
-  - License compatibility (MIT, Apache 2.0 preferred)
+  - License compatibility (MIT, Apache 2.0 preferred; GPLv3 acceptable for separate binaries)
   - Maintenance status (last commit <6 months)
   - Download count / community trust
+
+**hledger GPL Licensing:**
+- **hledger License:** GPLv3 (copyleft)
+- **Distribution Model:** Separate subprocess (not linked or embedded in executable)
+- **GPL Compliance:** Ledgerly spawns hledger via `ProcessStartInfo` (IPC boundary = GPL firewall)
+- **Legal Analysis:** GPL applies to derivative works, not separate programs communicating via CLI/stdin/stdout
+- **Precedent:** VS Code (MIT) bundles GPL extensions as separate processes
+- **Bundling Strategy:** hledger binaries distributed in Tauri app resources folder for user convenience
+- **Attribution:** LICENSE file includes hledger GPLv3 attribution and separates Ledgerly code (MIT/proprietary) from hledger binary licensing
+- **Source Code:** hledger source available at hledger.org (GPL requirement satisfied)
 
 ### Security Testing
 
