@@ -105,8 +105,10 @@ Based on Vertical Slice Architecture from brief, here are the high-level epics o
 
 ---
 
-## Epic 7: Category Reports Vertical Slice (P1 - Core Value)
+## Epic 7: Reporting & Data Export (Phase 2 - Deferred)
 **Goal:** Build reporting slice - query hledger for category breakdowns, time period filtering, comparison views, PDF/CSV export.
+
+**Deferral Rationale:** Epic 7 is deferred to Phase 2 to provide additional buffer for Epic 5 (predictions - the core differentiator). Users can use hledger CLI for reports in MVP. This epic will be reintroduced post-MVP based on user feedback priority.
 
 **Key Deliverables:**
 - GetCategoryReportQuery + Handler (call `hledger bal -O json` with date filters)
@@ -117,8 +119,6 @@ Based on Vertical Slice Architecture from brief, here are the high-level epics o
 - Interactive Chart.js visualizations
 
 **Success Criteria:** Category report generated in <5 seconds; drill-down to transactions works; PDF/CSV export well-formatted
-
-**Optional for MVP:** If timeline slips, cut this epic – users can use hledger CLI for reports
 
 ---
 
@@ -133,7 +133,7 @@ Based on Vertical Slice Architecture from brief, here are the high-level epics o
 | 4 | Epic 3: Dashboard Slice | hledger queries + caching + FileSystemWatcher |
 | 5-6 | Epic 4: Transaction CRUD Slice | .hledger rewrite strategy; 50K perf test Week 6 |
 | 7-8 | Epic 6: Categorize Slice | Auto-suggest + learning rules |
-| 9-10 | Epic 5: Predictions Slice (1.5 wks) + Epic 7: Reports (0.5 wks) | **Buffer: Cut Epic 7 if needed** |
+| 9-10 | Epic 5: Predictions Slice (2 wks) | Epic 7 deferred to Phase 2; full 2 weeks allocated to predictions (core differentiator) |
 | 11-12 | E2E Testing, Polish, Package | Playwright critical paths; cross-platform builds |
 
 **Critical Path (VSA):** Epics 1 → 2 → 3 → 4 (Foundation → Import → Dashboard → CRUD) = 6 weeks

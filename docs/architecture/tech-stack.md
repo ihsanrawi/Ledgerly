@@ -43,5 +43,7 @@
 | **Code Quality - Backend** | Roslyn Analyzers | Built-in .NET | Static code analysis | StyleCop rules, nullable analysis, enforce conventions |
 | **Code Quality - Frontend** | ESLint | 8.57.0 | TypeScript linting | Angular recommended rules, enforce code style |
 | **Code Formatting** | Prettier | 3.2.5 | Frontend code formatting | Consistent formatting, integrates with ESLint |
+| **API Documentation** | Swashbuckle.AspNetCore | 6.5.0+ | OpenAPI spec generation | Auto-generate API documentation with XML comments, export to `docs/api/openapi.yaml` |
+| **API Validation** | Spectral | Latest | OpenAPI linting | Validate OpenAPI spec for errors and best practices |
 
 ---

@@ -28,12 +28,6 @@ Based on the Project Brief's MVP scope and target user workflows, here are the f
 
 **FR13:** The system shall provide auto-completion for payees and categories based on transaction history
 
-**FR14:** The system shall generate category-based expense and income reports with time period filtering (month, quarter, year, custom range)
-
-**FR15:** The system shall provide comparison views (e.g., this month vs. last month, year-over-year)
-
-**FR16:** The system shall export reports to PDF and CSV formats
-
 **FR17:** The system shall detect recurring transactions (subscriptions, rent, salary) with >80% accuracy
 
 **FR18:** The system shall display a cash flow timeline showing predicted balance for the next 30-90 days
@@ -51,6 +45,12 @@ Based on the Project Brief's MVP scope and target user workflows, here are the f
 **FR5:** The system shall normalize payee names (e.g., "AMAZON.COM AMZN.COM/BILL" → "Amazon") *(Deferred: Complex bank-specific patterns; users can manually correct in MVP)*
 
 **FR7:** The system shall learn from user corrections to improve future categorization accuracy (target: 80% after 3 months) *(Deferred: Requires ML pipeline; MVP will collect training data via FR6)*
+
+**FR14:** The system shall generate category-based expense and income reports with time period filtering (month, quarter, year, custom range) *(Deferred to Phase 2: Users can use hledger CLI for reports; focus on core differentiators)*
+
+**FR15:** The system shall provide comparison views (e.g., this month vs. last month, year-over-year) *(Deferred to Phase 2)*
+
+**FR16:** The system shall export reports to PDF and CSV formats *(Deferred to Phase 2)*
 
 **FR19:** The system shall provide confidence scoring for predictions based on historical consistency *(Deferred: Extends FR18; add after validating base predictions)*
 

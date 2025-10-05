@@ -17,6 +17,7 @@
 4. Tauri 1.5+ wrapper integrated with Angular frontend
 5. SQLite configured for caching only (NOT financial data)
 6. GitHub repository initialized with .gitignore, README, VSA documentation
+7. OpenAPI specification configured with Swashbuckle.AspNetCore, spec exported to `docs/api/openapi.yaml`, Swagger UI accessible at `/swagger`
 
 ### Story 1.2: Integrate and Validate hledger Binary
 
@@ -466,7 +467,10 @@
 
 ---
 
-## Epic 7: Reporting & Data Export (Optional - P1)
+## Epic 7: Reporting & Data Export (Phase 2 - Deferred)
+
+**Deferral Decision Date:** 2025-10-05
+**Rationale:** Deferred to Phase 2 to allocate full 2 weeks to Epic 5 (predictions/recurring detection - the core differentiator). Users can use hledger CLI for reports in MVP. This epic will be reintroduced post-MVP based on user feedback priority.
 
 **Epic Goal:** Create category-based reports with time period filtering, comparison views, and PDF/CSV export.
 
