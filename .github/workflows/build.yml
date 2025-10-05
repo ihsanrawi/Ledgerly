@@ -1,0 +1,75 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-backend:
+    name: Build Backend (.NET)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore src/Ledgerly.Api/Ledgerly.Api.csproj
+
+    - name: Build
+      run: dotnet build src/Ledgerly.Api/Ledgerly.Api.csproj --no-restore
+
+    - name: Test
+      run: dotnet test src/Ledgerly.Api/ --no-build --verbosity normal
+
+  build-frontend:
+    name: Build Frontend (Angular)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: src/Ledgerly.Web/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci --prefix src/Ledgerly.Web
+
+    - name: Lint
+      run: cd src/Ledgerly.Web && npx eslint .
+
+    - name: Build
+      run: npm run build --prefix src/Ledgerly.Web
+
+    - name: Test
+      run: npm test --prefix src/Ledgerly.Web -- --watch=false --browsers=ChromeHeadless
+
+  # build-desktop:
+  #   name: Build Desktop (Tauri)
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: [ubuntu-latest, windows-latest, macos-latest]
+  #
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #
+  #   - name: Setup Rust
+  #     uses: actions-rs/toolchain@v1
+  #     with:
+  #       toolchain: stable
+  #
+  #   - name: Build Tauri App
+  #     run: cd src/Ledgerly.Desktop && cargo tauri build
+  #
+  # Uncomment when Tauri is fully configured
