@@ -1,5 +1,6 @@
 using System.Reflection;
 using Ledgerly.Api.Common.Data;
+using Ledgerly.Api.Common.Middleware;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
@@ -59,12 +60,17 @@ try
         }
     });
 
-    // Add CORS for development
+    // Add CORS for development (restrict to localhost origins)
     builder.Services.AddCors(options =>
     {
         options.AddDefaultPolicy(policy =>
         {
-            policy.AllowAnyOrigin()
+            policy.WithOrigins(
+                      "http://localhost:4200",  // Angular dev server
+                      "http://localhost:5173",  // Vite alternative
+                      "tauri://localhost",      // Tauri app
+                      "https://tauri.localhost" // Tauri secure
+                  )
                   .AllowAnyMethod()
                   .AllowAnyHeader();
         });
@@ -94,7 +100,14 @@ try
         });
     }
 
+    // Global exception handling (first in pipeline)
+    app.UseMiddleware<GlobalExceptionMiddleware>();
+
     app.UseCors();
+
+    // Add correlation ID middleware (before request logging)
+    app.UseMiddleware<CorrelationIdMiddleware>();
+
     app.UseSerilogRequestLogging();
 
     // Wolverine HTTP endpoints

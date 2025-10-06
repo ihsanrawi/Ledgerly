@@ -27,7 +27,7 @@ public readonly record struct Money
     /// <returns>Money instance.</returns>
     public static Money FromDecimal(decimal amount)
     {
-        return new Money((long)(amount * 100));
+        return new Money((long)Math.Round(amount * 100, MidpointRounding.AwayFromZero));
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public readonly record struct Money
     /// </summary>
     public static Money operator *(Money money, decimal multiplier)
     {
-        return new Money((long)(money.Cents * multiplier));
+        return new Money((long)Math.Round(money.Cents * multiplier, MidpointRounding.AwayFromZero));
     }
 
     public override string ToString()
