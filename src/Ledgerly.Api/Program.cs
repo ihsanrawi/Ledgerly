@@ -36,6 +36,9 @@ try
         opts.Discovery.IncludeAssembly(Assembly.GetExecutingAssembly());
     });
 
+    // Add Wolverine HTTP support
+    builder.Services.AddWolverineHttp();
+
     // Add OpenAPI/Swagger
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
