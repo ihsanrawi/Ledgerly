@@ -16,8 +16,8 @@
 .env.production.local
 
 # .NET
-bin/
-obj/
+[Bb]in/
+[Oo]bj/
 *.user
 *.suo
 *.cache
@@ -31,7 +31,7 @@ obj/
 
 # Node.js / Angular
 node_modules/
-dist/
+[Dd]ist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -55,9 +55,10 @@ Thumbs.db
 Desktop.ini
 
 # Build outputs
-build/
-out/
+[Bb]uild/
+[Oo]ut/
 target/
+*.angular/
 
 # Rust / Tauri
 src/Ledgerly.Desktop/src-tauri/target/
