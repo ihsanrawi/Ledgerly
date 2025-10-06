@@ -3,7 +3,7 @@ namespace Ledgerly.Api.Common.Exceptions;
 /// <summary>
 /// Exception thrown when hledger validation fails.
 /// </summary>
-public class HledgerValidationException : Exception
+public class HledgerValidationException : HledgerException
 {
     public HledgerValidationException(string message) : base(message)
     {

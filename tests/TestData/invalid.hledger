@@ -1,0 +1,5 @@
+; Invalid hledger file - unbalanced transaction
+
+2024-01-01 Unbalanced Transaction
+    assets:checking                 $100.00
+    expenses:test                    $50.00

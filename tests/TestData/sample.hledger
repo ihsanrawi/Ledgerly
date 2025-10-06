@@ -1,0 +1,42 @@
+; Sample hledger file for integration tests
+; 10 test transactions
+
+2024-01-01 Opening Balance
+    assets:checking                 $5,000.00
+    equity:opening balances
+
+2024-01-05 Grocery Store
+    expenses:groceries                 $85.50
+    liabilities:credit card
+
+2024-01-07 Salary Deposit
+    assets:checking                 $3,200.00
+    income:salary
+
+2024-01-10 Rent Payment
+    expenses:rent                   $1,200.00
+    assets:checking
+
+2024-01-12 Electric Bill
+    expenses:utilities:electric        $95.00
+    assets:checking
+
+2024-01-15 Restaurant
+    expenses:dining                    $45.75
+    liabilities:credit card
+
+2024-01-18 Gas Station
+    expenses:transportation:gas        $52.30
+    liabilities:credit card
+
+2024-01-20 Credit Card Payment
+    liabilities:credit card           $278.55
+    assets:checking
+
+2024-01-22 Online Shopping
+    expenses:shopping                 $125.99
+    liabilities:credit card
+
+2024-01-25 Coffee Shop
+    expenses:dining                    $8.50
+    assets:checking

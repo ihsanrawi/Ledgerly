@@ -1,0 +1,35 @@
+schema: 1
+story: '1.2'
+gate: CONCERNS
+status_reason: 'Week 1 validation passed and all AC met, but error handling lacks correlation IDs and chmod execution has no error handling.'
+reviewer: 'Quinn'
+updated: '2025-10-06T00:00:00Z'
+top_issues:
+  - id: 'MNT-001'
+    severity: medium
+    finding: 'Correlation IDs missing from structured logging despite being in coding standards'
+    suggested_action: 'Add correlation ID context to all log messages in HledgerBinaryManager and HledgerProcessRunner'
+  - id: 'REL-001'
+    severity: medium
+    finding: 'chmod execution (line 261 HledgerBinaryManager.cs) has no error handling or validation'
+    suggested_action: 'Add error handling for chmod failures and log permission setting results'
+  - id: 'TEST-001'
+    severity: low
+    finding: 'Timeout test skipped (line 118 HledgerProcessRunnerTests.cs) - no coverage for 30-second timeout behavior'
+    suggested_action: 'Implement timeout test using mocked long-running command or controlled delay'
+  - id: 'DOC-001'
+    severity: low
+    finding: 'No documentation of hledger JSON format complexities discovered during implementation'
+    suggested_action: 'Document nested JSON structure [[["account", depth, [amounts]], ...], [totals]] in code comments'
+trace:
+  totals:
+    requirements: 6
+    full: 5
+    partial: 1
+    none: 0
+  planning_ref: 'docs/qa/assessments/1.2-trace-20251006.md'
+  uncovered:
+    - ac: 'AC6'
+      reason: 'Week 1 Tauri validation partial - manual testing only, no automated E2E test'
+  notes: 'See docs/qa/assessments/1.2-trace-20251006.md for complete Given-When-Then mappings and test design recommendations'
+waiver: { active: false }
