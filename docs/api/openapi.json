@@ -1,0 +1,60 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Ledgerly API",
+    "description": "API for Ledgerly - Local-First Personal Finance with Plain Text Accounting",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Ledgerly.Api.Features.Health.HealthCheckEndpoint"
+        ],
+        "summary": "Checks if the API is healthy and running.",
+        "operationId": "GET_api_health",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Health status (e.g., \"Healthy\", \"Unhealthy\").",
+            "nullable": true
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the health check.",
+            "format": "date-time"
+          },
+          "service": {
+            "type": "string",
+            "description": "Service name.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Response model for health check."
+      }
+    }
+  }
+}
