@@ -31,4 +31,8 @@
     <EmbeddedResource Include="Resources/Binaries/hledger-linux-x64" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Features/**/*.Tests/**" />
+  </ItemGroup>
+
 </Project>
