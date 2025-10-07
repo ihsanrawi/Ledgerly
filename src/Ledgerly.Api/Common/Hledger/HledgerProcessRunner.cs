@@ -134,7 +134,7 @@ public class HledgerProcessRunner
     /// <summary>
     /// Validates hledger file using 'hledger check'.
     /// </summary>
-    public async Task<ValidationResult> ValidateFile(string hledgerFilePath)
+    public virtual async Task<ValidationResult> ValidateFile(string hledgerFilePath)
     {
         if (!File.Exists(hledgerFilePath))
         {
