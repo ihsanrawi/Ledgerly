@@ -72,3 +72,4 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+src/Ledgerly.Api/.idea/

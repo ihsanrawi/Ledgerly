@@ -1,0 +1,36 @@
+; Seed data for Story 1.5 Balance Display UI
+; Purpose: Provide sample transactions for end-to-end testing of Angular → API → Wolverine → hledger integration
+; Contains 5 transactions with diverse account types for UI display validation
+;
+; Account hierarchy:
+; - Assets:Checking (root asset account)
+; - Expenses:Groceries (expense subcategory)
+; - Expenses:Dining (expense subcategory)
+; - Income:Salary (income account)
+; - Equity:Opening (opening balance equity)
+
+account Assets:Checking
+account Expenses:Groceries
+account Expenses:Dining
+account Income:Salary
+account Equity:Opening
+
+2025-01-01 Opening Balance
+    Assets:Checking    $2000.00
+    Equity:Opening
+
+2025-01-05 Whole Foods
+    Expenses:Groceries    $150.00
+    Assets:Checking
+
+2025-01-08 Restaurant XYZ
+    Expenses:Dining    $75.00
+    Assets:Checking
+
+2025-01-15 January Salary
+    Income:Salary    -$3000.00
+    Assets:Checking
+
+2025-01-20 Trader Joe's
+    Expenses:Groceries    $100.00
+    Assets:Checking

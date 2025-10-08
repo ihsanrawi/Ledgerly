@@ -35,4 +35,8 @@
     <Compile Remove="Features/**/*.Tests/**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../Ledgerly.Contracts/Ledgerly.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -9,7 +9,7 @@ namespace Ledgerly.Api.Common.Hledger;
 /// <summary>
 /// Executes hledger CLI commands via Process, captures output, parses responses, handles errors.
 /// </summary>
-public class HledgerProcessRunner
+public class HledgerProcessRunner : IHledgerProcessRunner
 {
     private readonly HledgerBinaryManager _binaryManager;
     private readonly ILogger<HledgerProcessRunner> _logger;

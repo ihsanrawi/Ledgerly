@@ -79,6 +79,10 @@ try
     // Add correlation ID middleware
     builder.Services.AddHttpContextAccessor();
 
+    // Register hledger services
+    builder.Services.AddSingleton<Ledgerly.Api.Common.Hledger.HledgerBinaryManager>();
+    builder.Services.AddScoped<Ledgerly.Api.Common.Hledger.IHledgerProcessRunner, Ledgerly.Api.Common.Hledger.HledgerProcessRunner>();
+
     // Configure SQLite for caching only
     builder.Services.AddDbContext<LedgerlyDbContext>(options =>
     {
@@ -123,3 +127,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Make Program class accessible to integration tests
+public partial class Program { }

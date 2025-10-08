@@ -68,7 +68,9 @@
         "providerShortName": null,
         "signingIdentity": null
       },
-      "resources": [],
+      "resources": [
+        "../../../tests/TestData/seed.hledger"
+      ],
       "shortDescription": "",
       "targets": "all",
       "windows": {
