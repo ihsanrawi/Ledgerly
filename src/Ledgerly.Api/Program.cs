@@ -83,6 +83,9 @@ try
     builder.Services.AddSingleton<Ledgerly.Api.Common.Hledger.HledgerBinaryManager>();
     builder.Services.AddScoped<Ledgerly.Api.Common.Hledger.IHledgerProcessRunner, Ledgerly.Api.Common.Hledger.HledgerProcessRunner>();
 
+    // Register CSV import services
+    builder.Services.AddScoped<Ledgerly.Api.Features.ImportCsv.ICsvParserService, Ledgerly.Api.Features.ImportCsv.CsvParserService>();
+
     // Configure SQLite for caching only
     builder.Services.AddDbContext<LedgerlyDbContext>(options =>
     {
