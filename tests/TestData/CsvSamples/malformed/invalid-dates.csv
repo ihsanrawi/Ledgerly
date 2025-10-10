@@ -1,0 +1,5 @@
+Date,Description,Amount,Balance
+2025-13-45,Invalid Date 1,-5.75,1250.00
+99/99/9999,Invalid Date 2,-45.00,1255.75
+NotADate,Invalid Date 3,-127.50,1300.75
+2025-01-12,Valid Date,2500.00,1428.25

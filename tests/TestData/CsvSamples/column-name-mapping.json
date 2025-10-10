@@ -1,0 +1,163 @@
+{
+  "version": "1.0",
+  "description": "Reference data for CSV column auto-detection algorithm. Maps common column header variations to standardized field types.",
+  "lastUpdated": "2025-10-08",
+  "columnMappings": {
+    "date": {
+      "standardName": "Date",
+      "variants": [
+        "date",
+        "transaction date",
+        "post date",
+        "posting date",
+        "effective date",
+        "value date",
+        "datum",
+        "fecha",
+        "trans date",
+        "tran date"
+      ],
+      "confidence": {
+        "date": 1.0,
+        "transaction date": 0.95,
+        "post date": 0.9,
+        "datum": 0.85
+      }
+    },
+    "description": {
+      "standardName": "Description",
+      "variants": [
+        "description",
+        "payee",
+        "merchant",
+        "memo",
+        "details",
+        "transaction description",
+        "beschreibung",
+        "descripción",
+        "vendor",
+        "name",
+        "trans description"
+      ],
+      "confidence": {
+        "description": 1.0,
+        "payee": 0.95,
+        "merchant": 0.9,
+        "memo": 0.85
+      }
+    },
+    "amount": {
+      "standardName": "Amount",
+      "variants": [
+        "amount",
+        "transaction amount",
+        "betrag",
+        "monto",
+        "value",
+        "amt"
+      ],
+      "confidence": {
+        "amount": 1.0,
+        "transaction amount": 0.95,
+        "betrag": 0.9
+      }
+    },
+    "debit": {
+      "standardName": "Debit",
+      "variants": [
+        "debit",
+        "withdrawal",
+        "outflow",
+        "payment",
+        "withdrawals",
+        "paid out",
+        "expense"
+      ],
+      "confidence": {
+        "debit": 1.0,
+        "withdrawal": 0.95,
+        "outflow": 0.9
+      }
+    },
+    "credit": {
+      "standardName": "Credit",
+      "variants": [
+        "credit",
+        "deposit",
+        "inflow",
+        "receipt",
+        "deposits",
+        "paid in",
+        "income"
+      ],
+      "confidence": {
+        "credit": 1.0,
+        "deposit": 0.95,
+        "inflow": 0.9
+      }
+    },
+    "balance": {
+      "standardName": "Balance",
+      "variants": [
+        "balance",
+        "running balance",
+        "running bal",
+        "running bal.",
+        "available balance",
+        "current balance",
+        "saldo",
+        "bal",
+        "ending balance"
+      ],
+      "confidence": {
+        "balance": 1.0,
+        "running balance": 0.95,
+        "saldo": 0.9
+      }
+    },
+    "category": {
+      "standardName": "Category",
+      "variants": [
+        "category",
+        "type",
+        "transaction type",
+        "class",
+        "classification"
+      ],
+      "confidence": {
+        "category": 1.0,
+        "type": 0.8
+      }
+    },
+    "status": {
+      "standardName": "Status",
+      "variants": [
+        "status",
+        "state",
+        "cleared",
+        "pending"
+      ],
+      "confidence": {
+        "status": 1.0,
+        "state": 0.8
+      }
+    }
+  },
+  "matchingRules": {
+    "caseInsensitive": true,
+    "trimWhitespace": true,
+    "substringMatch": true,
+    "minimumConfidence": 0.7,
+    "description": "Matching is case-insensitive and supports partial substring matching. A column header 'Trans Date' would match 'transaction date' variant."
+  },
+  "exampleUsage": {
+    "input": "Transaction Date,Payee,Debit,Credit,Running Bal.",
+    "output": {
+      "Transaction Date": "date",
+      "Payee": "description",
+      "Debit": "debit",
+      "Credit": "credit",
+      "Running Bal.": "balance"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "bank": "Generic Bank",
+  "accountType": "Checking",
+  "source": "Simulated edge case",
+  "dateCollected": "2025-10-08",
+  "rowCount": 5,
+  "complexityLevel": "edge-case",
+  "knownEdgeCases": ["Unicode characters (accented letters)", "Emoji in payee names", "Special characters (&, ', é, ñ, ö, â)"],
+  "delimiter": ",",
+  "encoding": "UTF-8",
+  "dateFormat": "YYYY-MM-DD",
+  "hasHeaders": true,
+  "headerRow": 1,
+  "columns": ["Date", "Description", "Amount", "Balance"]
+}

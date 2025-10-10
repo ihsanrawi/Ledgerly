@@ -1,0 +1,15 @@
+{
+  "bank": "Generic Bank",
+  "accountType": "Business Checking",
+  "source": "Simulated edge case",
+  "dateCollected": "2025-10-08",
+  "rowCount": 3,
+  "complexityLevel": "edge-case",
+  "knownEdgeCases": ["Multi-line memos with quoted fields", "Embedded newlines in memo field"],
+  "delimiter": ",",
+  "encoding": "UTF-8",
+  "dateFormat": "YYYY-MM-DD",
+  "hasHeaders": true,
+  "headerRow": 1,
+  "columns": ["Date", "Payee", "Amount", "Memo"]
+}

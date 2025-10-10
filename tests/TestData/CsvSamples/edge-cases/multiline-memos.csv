@@ -1,0 +1,9 @@
+Date,Payee,Amount,Memo
+2025-01-15,ACME Corp,1500.00,"Invoice #12345
+Payment for consulting services
+January 2025"
+2025-01-10,Office Supplies Inc,-234.50,"Purchased:
+- Paper (10 reams)
+- Pens (Box of 50)
+- Stapler"
+2025-01-05,Coffee Shop,-15.75,Regular morning coffee

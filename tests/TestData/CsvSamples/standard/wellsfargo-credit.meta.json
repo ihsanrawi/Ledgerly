@@ -1,0 +1,15 @@
+{
+  "bank": "Wells Fargo",
+  "accountType": "Credit Card",
+  "source": "Anonymized community sample",
+  "dateCollected": "2025-10-08",
+  "rowCount": 8,
+  "complexityLevel": "standard",
+  "knownEdgeCases": ["Separate Debit/Credit columns"],
+  "delimiter": ",",
+  "encoding": "UTF-8",
+  "dateFormat": "YYYY-MM-DD",
+  "hasHeaders": true,
+  "headerRow": 1,
+  "columns": ["Date", "Merchant", "Debit", "Credit", "Balance"]
+}

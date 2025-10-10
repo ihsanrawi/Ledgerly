@@ -1,0 +1,15 @@
+{
+  "bank": "Generic European Bank",
+  "accountType": "Checking",
+  "source": "Simulated European format",
+  "dateCollected": "2025-10-08",
+  "rowCount": 4,
+  "complexityLevel": "edge-case",
+  "knownEdgeCases": ["Semicolon delimiter", "European decimal separator (comma)", "European date format (DD.MM.YYYY)", "Non-English headers"],
+  "delimiter": ";",
+  "encoding": "UTF-8",
+  "dateFormat": "DD.MM.YYYY",
+  "hasHeaders": true,
+  "headerRow": 1,
+  "columns": ["Datum", "Beschreibung", "Betrag", "Saldo"]
+}

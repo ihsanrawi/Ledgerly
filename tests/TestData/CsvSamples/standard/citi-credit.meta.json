@@ -1,0 +1,15 @@
+{
+  "bank": "Citibank",
+  "accountType": "Credit Card",
+  "source": "Anonymized community sample",
+  "dateCollected": "2025-10-08",
+  "rowCount": 7,
+  "complexityLevel": "standard",
+  "knownEdgeCases": ["Parentheses for negative amounts", "Status column"],
+  "delimiter": ",",
+  "encoding": "UTF-8",
+  "dateFormat": "MM/DD/YYYY",
+  "hasHeaders": true,
+  "headerRow": 1,
+  "columns": ["Status", "Date", "Description", "Debit", "Credit"]
+}

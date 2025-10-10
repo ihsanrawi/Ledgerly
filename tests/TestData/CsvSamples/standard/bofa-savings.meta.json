@@ -1,0 +1,15 @@
+{
+  "bank": "Bank of America",
+  "accountType": "Savings",
+  "source": "Anonymized community sample",
+  "dateCollected": "2025-10-08",
+  "rowCount": 3,
+  "complexityLevel": "standard",
+  "knownEdgeCases": [],
+  "delimiter": ",",
+  "encoding": "UTF-8",
+  "dateFormat": "MM/DD/YYYY",
+  "hasHeaders": true,
+  "headerRow": 1,
+  "columns": ["Date", "Description", "Amount", "Running Bal."]
+}

@@ -1,0 +1,15 @@
+{
+  "bank": "Chase Bank",
+  "accountType": "Checking",
+  "source": "Anonymized community sample",
+  "dateCollected": "2025-10-08",
+  "rowCount": 10,
+  "complexityLevel": "standard",
+  "knownEdgeCases": [],
+  "delimiter": ",",
+  "encoding": "UTF-8",
+  "dateFormat": "MM/DD/YYYY",
+  "hasHeaders": true,
+  "headerRow": 1,
+  "columns": ["Transaction Date", "Post Date", "Description", "Category", "Type", "Amount", "Memo"]
+}

@@ -1,0 +1,15 @@
+{
+  "bank": "Generic Bank",
+  "accountType": "Checking",
+  "source": "Simulated edge case",
+  "dateCollected": "2025-10-08",
+  "rowCount": 5,
+  "complexityLevel": "edge-case",
+  "knownEdgeCases": ["No header row", "Columns must be inferred from data patterns"],
+  "delimiter": ",",
+  "encoding": "UTF-8",
+  "dateFormat": "YYYY-MM-DD",
+  "hasHeaders": false,
+  "headerRow": 0,
+  "columns": ["(inferred: Date)", "(inferred: Description)", "(inferred: Amount)", "(inferred: Balance)"]
+}
