@@ -9,5 +9,9 @@ export const routes: Routes = [
   {
     path: 'balance',
     loadComponent: () => import('./features/balance/balance-display.component').then(m => m.BalanceDisplayComponent)
+  },
+  {
+    path: 'import',
+    loadComponent: () => import('./features/import/import-csv.component').then(m => m.ImportCsvComponent)
   }
 ];
