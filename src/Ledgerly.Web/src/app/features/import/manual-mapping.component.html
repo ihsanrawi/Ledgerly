@@ -1,0 +1,292 @@
+<mat-card class="manual-mapping-card">
+  <mat-card-header>
+    <mat-card-title>Manual Column Mapping</mat-card-title>
+    <mat-card-subtitle>Drag CSV headers to the appropriate fields below</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <!-- Validation Errors Banner -->
+    @if (!requiredFieldsMapped()) {
+      <div class="validation-banner error">
+        <mat-icon>error</mat-icon>
+        <div class="banner-content">
+          <strong>Manual mapping required</strong>
+          <ul class="error-list">
+            @for (error of validationErrors(); track error) {
+              <li>{{ error }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    }
+
+    <!-- Unmapped Headers Source -->
+    <div class="unmapped-headers-section">
+      <h3>Available CSV Headers</h3>
+      <div
+        class="header-chips"
+        cdkDropList
+        #unmappedList="cdkDropList"
+        [cdkDropListData]="unmappedHeaders()"
+        [cdkDropListConnectedTo]="[dateZone, amountZone, descriptionZone, memoZone, balanceZone, accountZone]"
+        cdkDropListSortingDisabled>
+        @for (header of unmappedHeaders(); track header) {
+          <mat-chip
+            cdkDrag
+            [cdkDragData]="header"
+            class="draggable-chip">
+            <mat-icon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>
+            {{ header }}
+          </mat-chip>
+        }
+        @if (unmappedHeaders().length === 0) {
+          <p class="empty-state">All headers mapped</p>
+        }
+      </div>
+    </div>
+
+    <!-- Drop Zones for Field Types -->
+    <div class="drop-zones">
+      <h3>Map Fields</h3>
+
+      <!-- Required Fields -->
+      <div class="required-fields">
+        <h4>Required Fields</h4>
+
+        <!-- Date Drop Zone -->
+        <div
+          class="drop-zone"
+          [class.has-mapping]="getMappedHeader('date')"
+          [class.error]="!getMappedHeader('date')"
+          cdkDropList
+          #dateZone="cdkDropList"
+          [cdkDropListData]="['date']"
+          (cdkDropListDropped)="onDrop($event, 'date')">
+          <div class="drop-zone-header">
+            <mat-icon class="field-icon">calendar_today</mat-icon>
+            <span class="field-label">Date Column</span>
+            <span class="required-badge">Required</span>
+          </div>
+          @if (getMappedHeader('date'); as header) {
+            <mat-chip [color]="getChipColor('date')" class="mapped-chip">
+              {{ header }}
+              <button matChipRemove (click)="removeMapping('date')">
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          } @else {
+            <p class="drop-placeholder">Drop date column here</p>
+          }
+        </div>
+
+        <!-- Amount Drop Zone -->
+        <div
+          class="drop-zone"
+          [class.has-mapping]="getMappedHeader('amount')"
+          [class.error]="!getMappedHeader('amount')"
+          cdkDropList
+          #amountZone="cdkDropList"
+          [cdkDropListData]="['amount']"
+          (cdkDropListDropped)="onDrop($event, 'amount')">
+          <div class="drop-zone-header">
+            <mat-icon class="field-icon">attach_money</mat-icon>
+            <span class="field-label">Amount Column</span>
+            <span class="required-badge">Required</span>
+          </div>
+          @if (getMappedHeader('amount'); as header) {
+            <mat-chip [color]="getChipColor('amount')" class="mapped-chip">
+              {{ header }}
+              <button matChipRemove (click)="removeMapping('amount')">
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          } @else {
+            <p class="drop-placeholder">Drop amount column here</p>
+          }
+        </div>
+
+        <!-- Description Drop Zone -->
+        <div
+          class="drop-zone"
+          [class.has-mapping]="getMappedHeader('description')"
+          [class.error]="!getMappedHeader('description')"
+          cdkDropList
+          #descriptionZone="cdkDropList"
+          [cdkDropListData]="['description']"
+          (cdkDropListDropped)="onDrop($event, 'description')">
+          <div class="drop-zone-header">
+            <mat-icon class="field-icon">description</mat-icon>
+            <span class="field-label">Description Column</span>
+            <span class="required-badge">Required</span>
+          </div>
+          @if (getMappedHeader('description'); as header) {
+            <mat-chip [color]="getChipColor('description')" class="mapped-chip">
+              {{ header }}
+              <button matChipRemove (click)="removeMapping('description')">
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          } @else {
+            <p class="drop-placeholder">Drop description column here</p>
+          }
+        </div>
+      </div>
+
+      <!-- Optional Fields -->
+      <div class="optional-fields">
+        <h4>Optional Fields</h4>
+
+        <!-- Memo Drop Zone -->
+        <div
+          class="drop-zone"
+          [class.has-mapping]="getMappedHeader('memo')"
+          cdkDropList
+          #memoZone="cdkDropList"
+          [cdkDropListData]="['memo']"
+          (cdkDropListDropped)="onDrop($event, 'memo')">
+          <div class="drop-zone-header">
+            <mat-icon class="field-icon">notes</mat-icon>
+            <span class="field-label">Memo Column</span>
+            <span class="optional-badge">Optional</span>
+          </div>
+          @if (getMappedHeader('memo'); as header) {
+            <mat-chip [color]="getChipColor('memo')" class="mapped-chip">
+              {{ header }}
+              <button matChipRemove (click)="removeMapping('memo')">
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          } @else {
+            <p class="drop-placeholder">Drop memo column here (optional)</p>
+          }
+        </div>
+
+        <!-- Balance Drop Zone -->
+        <div
+          class="drop-zone"
+          [class.has-mapping]="getMappedHeader('balance')"
+          cdkDropList
+          #balanceZone="cdkDropList"
+          [cdkDropListData]="['balance']"
+          (cdkDropListDropped)="onDrop($event, 'balance')">
+          <div class="drop-zone-header">
+            <mat-icon class="field-icon">account_balance</mat-icon>
+            <span class="field-label">Balance Column</span>
+            <span class="optional-badge">Optional</span>
+          </div>
+          @if (getMappedHeader('balance'); as header) {
+            <mat-chip [color]="getChipColor('balance')" class="mapped-chip">
+              {{ header }}
+              <button matChipRemove (click)="removeMapping('balance')">
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          } @else {
+            <p class="drop-placeholder">Drop balance column here (optional)</p>
+          }
+        </div>
+
+        <!-- Account Drop Zone -->
+        <div
+          class="drop-zone"
+          [class.has-mapping]="getMappedHeader('account')"
+          cdkDropList
+          #accountZone="cdkDropList"
+          [cdkDropListData]="['account']"
+          (cdkDropListDropped)="onDrop($event, 'account')">
+          <div class="drop-zone-header">
+            <mat-icon class="field-icon">account_circle</mat-icon>
+            <span class="field-label">Account Column</span>
+            <span class="optional-badge">Optional</span>
+          </div>
+          @if (getMappedHeader('account'); as header) {
+            <mat-chip [color]="getChipColor('account')" class="mapped-chip">
+              {{ header }}
+              <button matChipRemove (click)="removeMapping('account')">
+                <mat-icon>cancel</mat-icon>
+              </button>
+            </mat-chip>
+          } @else {
+            <p class="drop-placeholder">Drop account column here (optional)</p>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview Table with Highlighted Mapped Columns -->
+    <div class="preview-section">
+      <h3>Preview (First 5 Rows)</h3>
+      <table mat-table [dataSource]="sampleRows()" class="preview-table">
+        @for (header of getPreviewHeaders(); track header) {
+          <ng-container [matColumnDef]="header">
+            <th mat-header-cell *matHeaderCellDef>
+              <div class="header-cell">
+                <span>{{ header }}</span>
+                @if (getFieldTypeForHeader(header); as fieldType) {
+                  <mat-chip
+                    [color]="getChipColor(fieldType)"
+                    class="field-type-badge"
+                    [matTooltip]="'Mapped to ' + fieldType">
+                    {{ fieldType }}
+                    @if (isRequiredField(fieldType)) {
+                      <mat-icon class="required-icon">star</mat-icon>
+                    }
+                  </mat-chip>
+                }
+              </div>
+            </th>
+            <td mat-cell *matCellDef="let row">{{ getSampleValue(row, header) }}</td>
+          </ng-container>
+        }
+
+        <tr mat-header-row *matHeaderRowDef="getPreviewHeaders()"></tr>
+        <tr mat-row *matRowDef="let row; columns: getPreviewHeaders();"></tr>
+      </table>
+    </div>
+
+    <!-- Save Mapping Section -->
+    <div class="save-mapping-section">
+      <h3>Save This Mapping (Optional)</h3>
+      <p class="help-text">Save this column mapping to automatically apply it to future CSV imports from the same bank.</p>
+
+      <mat-form-field appearance="outline" class="bank-identifier-field">
+        <mat-label>Bank Identifier</mat-label>
+        <input
+          matInput
+          [(ngModel)]="bankIdentifier"
+          placeholder="e.g., Chase Checking, Bank of America"
+          [disabled]="!requiredFieldsMapped()">
+        <mat-hint>Enter a name to identify this bank's CSV format</mat-hint>
+      </mat-form-field>
+
+      <button
+        mat-raised-button
+        color="accent"
+        (click)="saveMapping()"
+        [disabled]="!requiredFieldsMapped() || savingMapping() || !bankIdentifier().trim()">
+        @if (savingMapping()) {
+          <ng-container>
+            <mat-icon>hourglass_empty</mat-icon>
+            Saving...
+          </ng-container>
+        } @else {
+          <ng-container>
+            <mat-icon>save</mat-icon>
+            Save Mapping
+          </ng-container>
+        }
+      </button>
+    </div>
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="proceedToNext()"
+      [disabled]="!requiredFieldsMapped()">
+      Next
+      <mat-icon>arrow_forward</mat-icon>
+    </button>
+  </mat-card-actions>
+</mat-card>

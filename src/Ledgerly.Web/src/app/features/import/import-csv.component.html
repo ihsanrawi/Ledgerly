@@ -65,8 +65,23 @@
       </div>
     </div>
 
+    <!-- Manual Mapping Section -->
+    <div *ngIf="showManualMapping() && previewData()" class="manual-mapping-section">
+      <button mat-button (click)="backToPreview()" class="back-button">
+        <mat-icon>arrow_back</mat-icon>
+        Back to Preview
+      </button>
+
+      <app-manual-mapping
+        [availableHeaders]="previewData()!.availableHeaders"
+        [sampleRows]="previewData()!.sampleRows"
+        [savedMapping]="previewData()!.savedMapping ?? null"
+        (mappingComplete)="onMappingComplete($event)">
+      </app-manual-mapping>
+    </div>
+
     <!-- Preview Section -->
-    <div *ngIf="previewData()" class="preview-section">
+    <div *ngIf="previewData() && !showManualMapping()" class="preview-section">
       <!-- Format Detection Info -->
       <div class="format-info">
         <h3>Detected Format</h3>
@@ -103,6 +118,19 @@
           </ul>
           <p class="warning-message">Please review column mapping before proceeding.</p>
         </div>
+      </div>
+
+      <!-- Manual Mapping Required Banner -->
+      <div *ngIf="requiresManualMapping()" class="manual-mapping-banner">
+        <mat-icon>rule</mat-icon>
+        <div>
+          <strong>Manual Mapping Required</strong>
+          <p>Automatic column detection has low confidence for required fields. Please manually map your columns.</p>
+        </div>
+        <button mat-raised-button color="primary" (click)="proceedToManualMapping()">
+          <mat-icon>touch_app</mat-icon>
+          Map Columns Manually
+        </button>
       </div>
 
       <!-- Preview Table -->
@@ -147,12 +175,24 @@
           <mat-icon>cancel</mat-icon>
           Cancel
         </button>
-        <button mat-raised-button color="primary" [disabled]="!canProceedToNextStep()">
+        <button
+          mat-raised-button
+          color="accent"
+          (click)="proceedToManualMapping()"
+          *ngIf="!requiresManualMapping()">
+          <mat-icon>rule</mat-icon>
+          Override Auto-Detection
+        </button>
+        <button
+          mat-raised-button
+          color="primary"
+          [disabled]="!canProceedToNextStep()"
+          *ngIf="canProceedToNextStep() && !requiresManualMapping()">
           <mat-icon>arrow_forward</mat-icon>
-          Next: Map Columns
+          Next: Import
         </button>
       </div>
-      <p *ngIf="!canProceedToNextStep()" class="next-step-message">
+      <p *ngIf="!canProceedToNextStep() && !requiresManualMapping()" class="next-step-message">
         <mat-icon>info</mat-icon>
         Please review column mapping before proceeding (required: Date and Amount columns)
       </p>

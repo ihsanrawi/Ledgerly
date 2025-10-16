@@ -1,6 +1,8 @@
+using Ledgerly.Api.Common.Data;
 using Ledgerly.Api.Features.ImportCsv;
 using Ledgerly.Contracts.Dtos;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -17,6 +19,7 @@ public class PreviewCsvHandlerTests
 {
     private readonly ICsvParserService _csvParser;
     private readonly IColumnDetectionService _columnDetection;
+    private readonly LedgerlyDbContext _dbContext;
     private readonly ILogger<PreviewCsvHandler> _logger;
     private readonly PreviewCsvHandler _sut;
 
@@ -25,7 +28,14 @@ public class PreviewCsvHandlerTests
         _csvParser = Substitute.For<ICsvParserService>();
         _columnDetection = Substitute.For<IColumnDetectionService>();
         _logger = Substitute.For<ILogger<PreviewCsvHandler>>();
-        _sut = new PreviewCsvHandler(_csvParser, _columnDetection, _logger);
+
+        // Setup in-memory database for tests
+        var options = new DbContextOptionsBuilder<LedgerlyDbContext>()
+            .UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}")
+            .Options;
+        _dbContext = new LedgerlyDbContext(options);
+
+        _sut = new PreviewCsvHandler(_csvParser, _columnDetection, _dbContext, _logger);
     }
 
     [Fact]
