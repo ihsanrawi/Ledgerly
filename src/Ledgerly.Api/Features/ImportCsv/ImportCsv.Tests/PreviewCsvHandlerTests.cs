@@ -16,14 +16,16 @@ namespace ImportCsv.Tests;
 public class PreviewCsvHandlerTests
 {
     private readonly ICsvParserService _csvParser;
+    private readonly IColumnDetectionService _columnDetection;
     private readonly ILogger<PreviewCsvHandler> _logger;
     private readonly PreviewCsvHandler _sut;
 
     public PreviewCsvHandlerTests()
     {
         _csvParser = Substitute.For<ICsvParserService>();
+        _columnDetection = Substitute.For<IColumnDetectionService>();
         _logger = Substitute.For<ILogger<PreviewCsvHandler>>();
-        _sut = new PreviewCsvHandler(_csvParser, _logger);
+        _sut = new PreviewCsvHandler(_csvParser, _columnDetection, _logger);
     }
 
     [Fact]

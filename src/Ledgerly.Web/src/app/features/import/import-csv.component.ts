@@ -5,12 +5,21 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 
 interface CsvParseError {
   lineNumber: number;
   errorMessage: string;
   columnName?: string;
+}
+
+interface ColumnDetectionResult {
+  detectedMappings: Record<string, string>; // header -> field type
+  confidenceScores: Record<string, number>; // field type -> confidence
+  warnings: string[];
+  allRequiredFieldsDetected: boolean;
 }
 
 interface PreviewCsvResponse {
@@ -20,6 +29,7 @@ interface PreviewCsvResponse {
   detectedDelimiter: string;
   detectedEncoding: string;
   errors: CsvParseError[];
+  columnDetection?: ColumnDetectionResult | null;
 }
 
 @Component({
@@ -31,7 +41,9 @@ interface PreviewCsvResponse {
     MatButtonModule,
     MatProgressSpinnerModule,
     MatTableModule,
-    MatIconModule
+    MatIconModule,
+    MatTooltipModule,
+    MatChipsModule
   ],
   templateUrl: './import-csv.component.html',
   styleUrls: ['./import-csv.component.scss']
@@ -155,5 +167,62 @@ export class ImportCsvComponent {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  // Column detection helpers
+  getDetectedFieldType(header: string): string | null {
+    const detection = this.previewData()?.columnDetection;
+    if (!detection) return null;
+    return detection.detectedMappings[header] || null;
+  }
+
+  getFieldTypeLabel(fieldType: string | null): string {
+    if (!fieldType) return '';
+    return fieldType.charAt(0).toUpperCase() + fieldType.slice(1);
+  }
+
+  getConfidenceIcon(fieldType: string | null): string {
+    if (!fieldType) return '';
+
+    const detection = this.previewData()?.columnDetection;
+    if (!detection || !detection.confidenceScores[fieldType]) return '';
+
+    const confidence = detection.confidenceScores[fieldType];
+    if (confidence >= 0.9) return 'check_circle'; // Green checkmark
+    if (confidence >= 0.7) return 'warning'; // Yellow warning
+    return 'error'; // Red alert
+  }
+
+  getConfidenceColor(fieldType: string | null): string {
+    if (!fieldType) return '';
+
+    const detection = this.previewData()?.columnDetection;
+    if (!detection || !detection.confidenceScores[fieldType]) return '';
+
+    const confidence = detection.confidenceScores[fieldType];
+    if (confidence >= 0.9) return 'success';
+    if (confidence >= 0.7) return 'warn';
+    return 'error';
+  }
+
+  getConfidenceTooltip(header: string): string {
+    const fieldType = this.getDetectedFieldType(header);
+    if (!fieldType) return 'Not detected';
+
+    const detection = this.previewData()?.columnDetection;
+    if (!detection || !detection.confidenceScores[fieldType]) return 'Not detected';
+
+    const confidence = detection.confidenceScores[fieldType];
+    return `Detected as ${this.getFieldTypeLabel(fieldType)} (${Math.round(confidence * 100)}% confidence)`;
+  }
+
+  hasDetectionWarnings(): boolean {
+    const detection = this.previewData()?.columnDetection;
+    return detection?.warnings && detection.warnings.length > 0 || false;
+  }
+
+  canProceedToNextStep(): boolean {
+    const detection = this.previewData()?.columnDetection;
+    return detection?.allRequiredFieldsDetected || false;
   }
 }

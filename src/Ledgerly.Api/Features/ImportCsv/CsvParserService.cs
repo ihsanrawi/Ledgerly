@@ -25,10 +25,9 @@ public class CsvParserService : ICsvParserService
     /// </summary>
     public async Task<CsvParseResult> ParseCsvFile(Stream fileStream, string fileName)
     {
-        var correlationId = Guid.NewGuid();
         _logger.LogInformation(
-            "Starting CSV parse for file: {FileName}, CorrelationId: {CorrelationId}",
-            fileName, correlationId);
+            "Starting CSV parse for file: {FileName}",
+            fileName);
 
         var parseErrors = new List<CsvParseError>();
 

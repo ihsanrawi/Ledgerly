@@ -85,6 +85,7 @@ try
 
     // Register CSV import services
     builder.Services.AddScoped<Ledgerly.Api.Features.ImportCsv.ICsvParserService, Ledgerly.Api.Features.ImportCsv.CsvParserService>();
+    builder.Services.AddScoped<Ledgerly.Api.Features.ImportCsv.IColumnDetectionService, Ledgerly.Api.Features.ImportCsv.ColumnDetectionService>();
 
     // Configure SQLite for caching only
     builder.Services.AddDbContext<LedgerlyDbContext>(options =>

@@ -91,6 +91,20 @@
         </div>
       </div>
 
+      <!-- Column Detection Warnings -->
+      <div *ngIf="hasDetectionWarnings()" class="detection-warnings">
+        <mat-icon>warning</mat-icon>
+        <div>
+          <strong>Column Detection Needs Review:</strong>
+          <ul>
+            <li *ngFor="let warning of previewData()!.columnDetection!.warnings">
+              {{ warning }}
+            </li>
+          </ul>
+          <p class="warning-message">Please review column mapping before proceeding.</p>
+        </div>
+      </div>
+
       <!-- Preview Table -->
       <div class="preview-table-container">
         <h3>Preview (First 10 Rows)</h3>
@@ -98,7 +112,27 @@
 
           <!-- Dynamic Columns -->
           <ng-container *ngFor="let column of getDisplayedColumns()" [matColumnDef]="column">
-            <th mat-header-cell *matHeaderCellDef class="sticky-header">{{ column }}</th>
+            <th mat-header-cell *matHeaderCellDef class="sticky-header column-header">
+              <div class="header-content">
+                <span class="header-text">{{ column }}</span>
+                <div class="header-indicators" *ngIf="getDetectedFieldType(column)">
+                  <mat-chip-set aria-label="Field type">
+                    <mat-chip class="field-type-chip">
+                      {{ getFieldTypeLabel(getDetectedFieldType(column)) }}
+                    </mat-chip>
+                  </mat-chip-set>
+                  <mat-icon
+                    class="confidence-icon"
+                    [class.confidence-high]="getConfidenceColor(getDetectedFieldType(column)) === 'success'"
+                    [class.confidence-medium]="getConfidenceColor(getDetectedFieldType(column)) === 'warn'"
+                    [class.confidence-low]="getConfidenceColor(getDetectedFieldType(column)) === 'error'"
+                    [matTooltip]="getConfidenceTooltip(column)"
+                    matTooltipPosition="above">
+                    {{ getConfidenceIcon(getDetectedFieldType(column)) }}
+                  </mat-icon>
+                </div>
+              </div>
+            </th>
             <td mat-cell *matCellDef="let row">{{ row[column] }}</td>
           </ng-container>
 
@@ -113,11 +147,15 @@
           <mat-icon>cancel</mat-icon>
           Cancel
         </button>
-        <button mat-raised-button color="primary" disabled>
+        <button mat-raised-button color="primary" [disabled]="!canProceedToNextStep()">
           <mat-icon>arrow_forward</mat-icon>
           Next: Map Columns
         </button>
       </div>
+      <p *ngIf="!canProceedToNextStep()" class="next-step-message">
+        <mat-icon>info</mat-icon>
+        Please review column mapping before proceeding (required: Date and Amount columns)
+      </p>
     </div>
   </mat-card-content>
 </mat-card>
