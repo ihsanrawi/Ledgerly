@@ -47,6 +47,60 @@
   margin: 0.5rem 0;
 }
 
+.manual-mapping-section {
+  padding: 1rem;
+
+  .back-button {
+    margin-bottom: 1rem;
+  }
+}
+
+.manual-mapping-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  margin: 16px 0;
+  background-color: #fff3e0;
+  border-left: 4px solid #ff9800;
+  border-radius: 4px;
+
+  mat-icon {
+    color: #ff9800;
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+  }
+
+  div {
+    flex: 1;
+
+    strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 16px;
+      color: #e65100;
+    }
+
+    p {
+      margin: 0;
+      font-size: 14px;
+      color: #666;
+    }
+  }
+
+  button {
+    white-space: nowrap;
+
+    mat-icon {
+      margin-right: 8px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
 .selected-file-info {
   display: flex;
   align-items: center;

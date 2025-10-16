@@ -8,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { HttpClient, HttpEventType } from '@angular/common/http';
+import { ManualMappingComponent } from './manual-mapping.component';
+import { ApiConfigService } from '../../core/services/api-config.service';
 
 interface CsvParseError {
   lineNumber: number;
@@ -30,6 +32,9 @@ interface PreviewCsvResponse {
   detectedEncoding: string;
   errors: CsvParseError[];
   columnDetection?: ColumnDetectionResult | null;
+  requiresManualMapping: boolean;
+  savedMapping?: Record<string, string> | null;
+  availableHeaders: string[];
 }
 
 @Component({
@@ -43,7 +48,8 @@ interface PreviewCsvResponse {
     MatTableModule,
     MatIconModule,
     MatTooltipModule,
-    MatChipsModule
+    MatChipsModule,
+    ManualMappingComponent
   ],
   templateUrl: './import-csv.component.html',
   styleUrls: ['./import-csv.component.scss']
@@ -54,8 +60,13 @@ export class ImportCsvComponent {
   previewData = signal<PreviewCsvResponse | null>(null);
   errorMessage = signal<string | null>(null);
   dragOver = signal(false);
+  showManualMapping = signal(false);
+  finalColumnMapping = signal<Record<string, string> | null>(null);
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private apiConfig: ApiConfigService
+  ) {}
 
   onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -118,7 +129,7 @@ export class ImportCsvComponent {
     const formData = new FormData();
     formData.append('file', file);
 
-    this.http.post<PreviewCsvResponse>('http://localhost:5000/api/import/preview', formData, {
+    this.http.post<PreviewCsvResponse>(this.apiConfig.getApiUrl('/api/import/preview'), formData, {
       reportProgress: true,
       observe: 'events'
     }).subscribe({
@@ -224,5 +235,23 @@ export class ImportCsvComponent {
   canProceedToNextStep(): boolean {
     const detection = this.previewData()?.columnDetection;
     return detection?.allRequiredFieldsDetected || false;
+  }
+
+  requiresManualMapping(): boolean {
+    return this.previewData()?.requiresManualMapping || false;
+  }
+
+  proceedToManualMapping(): void {
+    this.showManualMapping.set(true);
+  }
+
+  onMappingComplete(mapping: Record<string, string>): void {
+    this.finalColumnMapping.set(mapping);
+    // TODO: Proceed to next step in import workflow (duplicate detection/category suggestions)
+    console.log('Column mapping complete:', mapping);
+  }
+
+  backToPreview(): void {
+    this.showManualMapping.set(false);
   }
 }

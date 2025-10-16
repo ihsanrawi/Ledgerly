@@ -1,3 +1,4 @@
+using Ledgerly.Api.Common.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ledgerly.Api.Common.Data;
@@ -22,10 +23,28 @@ public class LedgerlyDbContext : DbContext
 
     // DbSets will be added in future stories as needed
 
+    /// <summary>
+    /// Column mapping rules for CSV imports (Story 2.4).
+    /// </summary>
+    public DbSet<ColumnMappingRule> ColumnMappingRules => Set<ColumnMappingRule>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         // Model configuration will be added in future stories
+
+        // Story 2.4: ColumnMappingRule configuration
+        modelBuilder.Entity<ColumnMappingRule>(entity =>
+        {
+            entity.ToTable("ColumnMappingRules");
+            entity.HasKey(e => e.Id);
+
+            // Index on BankIdentifier for fast lookup
+            entity.HasIndex(e => e.BankIdentifier);
+
+            // Row version for optimistic concurrency
+            entity.Property(e => e.RowVersion).IsRowVersion();
+        });
     }
 }
