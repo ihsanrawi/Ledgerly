@@ -22,10 +22,9 @@ public class GetBalanceHandler
 
     public async Task<BalanceResponse> Handle(GetBalanceQuery query, CancellationToken ct)
     {
-        var correlationId = Guid.NewGuid();
         _logger.LogInformation(
-            "Executing GetBalanceQuery with CorrelationId: {CorrelationId}, AccountFilter: {AccountFilter}",
-            correlationId, query.AccountFilter);
+            "Executing GetBalanceQuery. AccountFilter: {AccountFilter}",
+            query.AccountFilter);
 
         // For Story 1.5, use seed.hledger for testing
         // TODO: Story 2.x - Replace with user's actual ledger file path

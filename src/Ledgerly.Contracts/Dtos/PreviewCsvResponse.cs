@@ -11,4 +11,10 @@ public record PreviewCsvResponse
     public string DetectedDelimiter { get; init; } = ",";
     public string DetectedEncoding { get; init; } = "UTF-8";
     public List<CsvParseError> Errors { get; init; } = new();
+
+    /// <summary>
+    /// Column detection results with confidence scores.
+    /// Added in Story 2.3 for automatic column detection.
+    /// </summary>
+    public ColumnDetectionResult? ColumnDetection { get; init; }
 }
