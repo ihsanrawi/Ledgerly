@@ -1,5 +1,6 @@
 import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -9,7 +10,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSelectModule } from '@angular/material/select';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { Router } from '@angular/router';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { ManualMappingComponent } from './manual-mapping.component';
 import { DuplicateWarningDialogComponent } from './duplicate-warning-dialog.component';
@@ -60,11 +65,36 @@ interface PreviewCsvResponse {
   suggestions: CategorySuggestionDto[];
 }
 
+interface ImportTransactionDto {
+  date: string;
+  payee: string;
+  amount: number;
+  category: string;
+  account: string;
+  memo?: string;
+  isDuplicate: boolean;
+}
+
+interface ConfirmImportCommand {
+  transactions: ImportTransactionDto[];
+  csvImportId: string;
+  fileName: string;
+}
+
+interface ConfirmImportResponse {
+  success: boolean;
+  transactionsImported: number;
+  duplicatesSkipped: number;
+  transactionIds: string[];
+  errorMessage?: string;
+}
+
 @Component({
   selector: 'app-import-csv',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatProgressSpinnerModule,
@@ -74,6 +104,9 @@ interface PreviewCsvResponse {
     MatChipsModule,
     MatSelectModule,
     MatBadgeModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatSnackBarModule,
     ManualMappingComponent
   ],
   templateUrl: './import-csv.component.html',
@@ -94,6 +127,20 @@ export class ImportCsvComponent {
   // Category suggestions state
   categorySuggestions = signal<Map<number, CategorySuggestionDto>>(new Map());
   selectedCategories = signal<Map<number, string>>(new Map());
+
+  // Story 2.6: Import confirmation state
+  showConfirmationPreview = signal(false);
+  editedPayees = signal<Map<number, string>>(new Map());
+  editedCategories = signal<Map<number, string>>(new Map());
+  importing = signal(false);
+  availableCategories = signal<Array<{id: string, name: string}>>([
+    {id: 'expenses:groceries', name: 'Groceries'},
+    {id: 'expenses:shopping', name: 'Shopping'},
+    {id: 'expenses:utilities', name: 'Utilities'},
+    {id: 'expenses:entertainment', name: 'Entertainment'},
+    {id: 'income:salary', name: 'Salary'},
+    {id: 'assets:checking', name: 'Checking Account'}
+  ]);
 
   // Computed values
   hasDuplicates = computed(() =>
@@ -119,19 +166,45 @@ export class ImportCsvComponent {
     const total = preview.totalRowCount;
     const skipped = this.duplicatesSkipped();
     const withSuggestions = this.transactionsWithSuggestions();
+    const needsCategorization = this.transactionsNeedingCategories();
 
     return {
       total,
       skipped,
       withSuggestions,
-      importing: total - skipped
+      needsCategorization,
+      readyToImport: total - skipped - needsCategorization
     };
+  });
+
+  // Story 2.6: Computed values for confirmation preview
+  transactionsNeedingCategories = computed(() => {
+    const preview = this.previewData();
+    if (!preview) return 0;
+
+    let count = 0;
+    preview.sampleRows.forEach((row, index) => {
+      const suggestion = this.categorySuggestions().get(index);
+      const editedCategory = this.editedCategories().get(index);
+      const selectedCategory = this.selectedCategories().get(index);
+
+      if (!suggestion && !editedCategory && !selectedCategory) {
+        count++;
+      }
+    });
+    return count;
+  });
+
+  isImportValid = computed(() => {
+    return this.transactionsNeedingCategories() === 0;
   });
 
   constructor(
     private http: HttpClient,
     private apiConfig: ApiConfigService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar,
+    private router: Router
   ) {}
 
   onDragOver(event: DragEvent): void {
@@ -446,11 +519,153 @@ export class ImportCsvComponent {
   }
 
   finalizeImport(): void {
-    // Filter out skipped duplicates and prepare for final import
-    const summary = this.importSummary();
-    if (!summary) return;
+    // Story 2.6: Show confirmation preview instead of importing immediately
+    this.showConfirmationPreview.set(true);
+  }
 
-    // TODO: Navigate to next step (transaction confirmation) - Story 2.6
-    console.log(`Importing ${summary.importing} transactions (${summary.skipped} duplicates skipped, ${summary.withSuggestions} with suggested categories)`);
+  // Story 2.6: Handle payee edits in confirmation preview
+  onPayeeEdit(index: number, newPayee: string): void {
+    this.editedPayees.update(map => {
+      const newMap = new Map(map);
+      newMap.set(index, newPayee);
+      return newMap;
+    });
+  }
+
+  // Story 2.6: Handle category edits in confirmation preview
+  onCategoryEdit(index: number, newCategoryId: string): void {
+    this.editedCategories.update(map => {
+      const newMap = new Map(map);
+      newMap.set(index, newCategoryId);
+      return newMap;
+    });
+  }
+
+  // Story 2.6: Get current payee (edited or original)
+  getCurrentPayee(index: number, originalPayee: string): string {
+    return this.editedPayees().get(index) || originalPayee;
+  }
+
+  // Story 2.6: Get current category (edited, selected, or suggested)
+  getCurrentCategory(index: number): string {
+    const edited = this.editedCategories().get(index);
+    if (edited) return edited;
+
+    const selected = this.selectedCategories().get(index);
+    if (selected) return selected;
+
+    const suggestion = this.categorySuggestions().get(index);
+    if (suggestion) return suggestion.suggestedCategoryId;
+
+    return '';
+  }
+
+  // Story 2.6: Check if transaction is duplicate
+  isTransactionDuplicate(index: number): boolean {
+    return this.duplicateDecisions().get(index) === 'skip';
+  }
+
+  // Story 2.6: Confirm and execute import
+  confirmImport(): void {
+    const preview = this.previewData();
+    const file = this.selectedFile();
+    if (!preview || !file) return;
+
+    // Build transaction list from preview data
+    const transactions: ImportTransactionDto[] = [];
+    preview.sampleRows.forEach((row, index) => {
+      const isDuplicate = this.isTransactionDuplicate(index);
+
+      transactions.push({
+        date: row['date'] || row['Date'] || '',
+        payee: this.getCurrentPayee(index, row['payee'] || row['Payee'] || ''),
+        amount: parseFloat(row['amount'] || row['Amount'] || '0'),
+        category: this.getCurrentCategory(index),
+        account: row['account'] || 'Assets:Checking',
+        memo: row['memo'] || row['description'] || undefined,
+        isDuplicate
+      });
+    });
+
+    const command: ConfirmImportCommand = {
+      transactions,
+      csvImportId: crypto.randomUUID(),
+      fileName: file.name
+    };
+
+    this.importing.set(true);
+
+    this.http.post<ConfirmImportResponse>(
+      this.apiConfig.getApiUrl('/api/import/confirm'),
+      command
+    ).subscribe({
+      next: (response) => {
+        this.importing.set(false);
+
+        if (response.success) {
+          // Show success snackbar with navigation
+          const snackBarRef = this.snackBar.open(
+            `Imported ${response.transactionsImported} transactions successfully`,
+            'View Dashboard',
+            {
+              duration: 10000,
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom',
+              panelClass: ['success-snackbar']
+            }
+          );
+
+          snackBarRef.onAction().subscribe(() => {
+            this.router.navigate(['/dashboard']);
+          });
+
+          // Reset component state
+          this.resetImportState();
+        } else {
+          this.showErrorSnackbar(response.errorMessage || 'Import failed');
+        }
+      },
+      error: (error) => {
+        this.importing.set(false);
+
+        let errorMessage = 'Import failed. Please try again.';
+        if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.status === 0) {
+          errorMessage = 'Cannot connect to server. Please ensure the API is running.';
+        }
+
+        this.showErrorSnackbar(errorMessage);
+      }
+    });
+  }
+
+  // Story 2.6: Show error snackbar with retry option
+  private showErrorSnackbar(message: string): void {
+    this.snackBar.open(message, 'Retry', {
+      duration: 10000,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom',
+      panelClass: ['error-snackbar']
+    }).onAction().subscribe(() => {
+      this.confirmImport();
+    });
+  }
+
+  // Story 2.6: Reset import state after successful import
+  private resetImportState(): void {
+    this.selectedFile.set(null);
+    this.previewData.set(null);
+    this.showConfirmationPreview.set(false);
+    this.editedPayees.set(new Map());
+    this.editedCategories.set(new Map());
+    this.duplicateDecisions.set(new Map());
+    this.categorySuggestions.set(new Map());
+    this.selectedCategories.set(new Map());
+  }
+
+  // Story 2.6: Back to preview from confirmation
+  backToPreviewFromConfirmation(): void {
+    this.showConfirmationPreview.set(false);
   }
 }
