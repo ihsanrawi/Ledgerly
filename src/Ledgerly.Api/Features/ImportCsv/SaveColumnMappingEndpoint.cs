@@ -1,24 +1,28 @@
 using Wolverine;
+using Wolverine.Http;
 
 namespace Ledgerly.Api.Features.ImportCsv;
 
 /// <summary>
-/// API endpoint for saving column mapping rules.
+/// Wolverine HTTP endpoint for saving column mapping rules.
 /// Story 2.4 - Manual Column Mapping Interface (AC: 5, 6).
 /// </summary>
-public static class SaveColumnMappingEndpoint
+public class SaveColumnMappingEndpoint
 {
-    public static void MapSaveColumnMappingEndpoint(this IEndpointRouteBuilder app)
+    /// <summary>
+    /// Save column mapping rule for CSV imports.
+    /// </summary>
+    /// <param name="command">Save column mapping command</param>
+    /// <param name="bus">Wolverine message bus (injected)</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Response with saved mapping ID and message</returns>
+    [WolverinePost("/api/import/save-mapping")]
+    public async Task<Ledgerly.Contracts.Dtos.SaveColumnMappingResponse> Post(
+        SaveColumnMappingCommand command,
+        IMessageBus bus,
+        CancellationToken ct)
     {
-        app.MapPost("/api/import/save-mapping", async (SaveColumnMappingCommand command, IMessageBus bus, CancellationToken ct) =>
-        {
-            var response = await bus.InvokeAsync<Ledgerly.Contracts.Dtos.SaveColumnMappingResponse>(command, ct);
-            return Results.Ok(response);
-        })
-        .WithName("SaveColumnMapping")
-        .WithTags("Import")
-        .Produces<Ledgerly.Contracts.Dtos.SaveColumnMappingResponse>(200)
-        .Produces(400)
-        .Produces(500);
+        var result = await bus.InvokeAsync<Ledgerly.Contracts.Dtos.SaveColumnMappingResponse>(command, ct);
+        return result;
     }
 }

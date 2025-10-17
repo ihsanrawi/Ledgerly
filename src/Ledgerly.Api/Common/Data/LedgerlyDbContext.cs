@@ -28,6 +28,17 @@ public class LedgerlyDbContext : DbContext
     /// </summary>
     public DbSet<ColumnMappingRule> ColumnMappingRules => Set<ColumnMappingRule>();
 
+    /// <summary>
+    /// Import rules for category suggestions (Story 2.5).
+    /// </summary>
+    public DbSet<ImportRule> ImportRules => Set<ImportRule>();
+
+    /// <summary>
+    /// Transactions cache for duplicate detection (Story 2.5).
+    /// CRITICAL: This is a CACHE only - .hledger files are source of truth.
+    /// </summary>
+    public DbSet<Transaction> Transactions => Set<Transaction>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -45,6 +56,36 @@ public class LedgerlyDbContext : DbContext
 
             // Row version for optimistic concurrency
             entity.Property(e => e.RowVersion).IsRowVersion();
+        });
+
+        // Story 2.5: ImportRule configuration
+        modelBuilder.Entity<ImportRule>(entity =>
+        {
+            entity.ToTable("ImportRules");
+            entity.HasKey(e => e.Id);
+
+            // Index on Priority for fast rule ordering
+            entity.HasIndex(e => e.Priority);
+
+            entity.Property(e => e.PayeePattern).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.SuggestedCategory).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Confidence).HasPrecision(5, 4); // 0.0000 to 1.0000
+        });
+
+        // Story 2.5: Transaction configuration for duplicate detection
+        modelBuilder.Entity<Transaction>(entity =>
+        {
+            entity.ToTable("Transactions");
+            entity.HasKey(e => e.HledgerTransactionCode);
+
+            // Index on Hash for O(1) duplicate detection
+            entity.HasIndex(e => e.Hash);
+
+            entity.Property(e => e.Date).IsRequired();
+            entity.Property(e => e.Payee).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Account).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.CategoryAccount).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Hash).HasMaxLength(44).IsRequired(); // Base64 SHA256 = 44 chars
         });
     }
 }

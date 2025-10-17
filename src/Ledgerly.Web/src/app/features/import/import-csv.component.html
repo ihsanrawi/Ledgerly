@@ -133,6 +133,21 @@
         </button>
       </div>
 
+      <!-- Import Summary (after duplicate detection) -->
+      <div *ngIf="importSummary()" class="import-summary">
+        <mat-icon>info</mat-icon>
+        <div class="summary-text">
+          <strong>Import Summary:</strong>
+          Importing {{ importSummary()!.importing }} transactions
+          <span *ngIf="importSummary()!.skipped > 0">
+            ({{ importSummary()!.skipped }} duplicates skipped)
+          </span>
+          <span *ngIf="importSummary()!.withSuggestions > 0">
+            ({{ importSummary()!.withSuggestions }} with category suggestions)
+          </span>
+        </div>
+      </div>
+
       <!-- Preview Table -->
       <div class="preview-table-container">
         <h3>Preview (First 10 Rows)</h3>
@@ -164,8 +179,51 @@
             <td mat-cell *matCellDef="let row">{{ row[column] }}</td>
           </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="getDisplayedColumns(); sticky: true"></tr>
-          <tr mat-row *matRowDef="let row; columns: getDisplayedColumns();"></tr>
+          <!-- Category Suggestions Column -->
+          <ng-container matColumnDef="category">
+            <th mat-header-cell *matHeaderCellDef class="sticky-header column-header">
+              <div class="header-content">
+                <span class="header-text">Category</span>
+                <mat-icon class="info-icon" matTooltip="Suggested categories based on payee patterns">
+                  info
+                </mat-icon>
+              </div>
+            </th>
+            <td mat-cell *matCellDef="let row; let i = index"
+                [class.suggestion-highlight]="getSuggestionForTransaction(i)"
+                [class.no-suggestion]="!getSuggestionForTransaction(i)">
+              <div class="category-cell" *ngIf="getSuggestionForTransaction(i) as suggestion">
+                <mat-chip-set aria-label="Category suggestion">
+                  <mat-chip [class]="getSuggestionConfidenceClass(suggestion.confidence)">
+                    {{ suggestion.categoryName }}
+                    <span class="confidence-badge">{{ (suggestion.confidence * 100).toFixed(0) }}%</span>
+                  </mat-chip>
+                </mat-chip-set>
+                <div class="category-actions">
+                  <button mat-icon-button
+                          color="primary"
+                          (click)="acceptSuggestion(i, suggestion)"
+                          matTooltip="Accept suggestion">
+                    <mat-icon>check_circle</mat-icon>
+                  </button>
+                  <button mat-icon-button
+                          matTooltip="Override category">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                </div>
+              </div>
+              <div class="category-cell no-suggestion-text" *ngIf="!getSuggestionForTransaction(i)">
+                <mat-chip-set>
+                  <mat-chip class="no-suggestion-chip">
+                    No suggestion
+                  </mat-chip>
+                </mat-chip-set>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="getDisplayedColumnsWithCategory(); sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: getDisplayedColumnsWithCategory();"></tr>
         </table>
       </div>
 
@@ -186,15 +244,29 @@
         <button
           mat-raised-button
           color="primary"
+          (click)="checkForDuplicates()"
           [disabled]="!canProceedToNextStep()"
-          *ngIf="canProceedToNextStep() && !requiresManualMapping()">
+          *ngIf="canProceedToNextStep() && !requiresManualMapping() && !hasDuplicates()">
           <mat-icon>arrow_forward</mat-icon>
-          Next: Import
+          Next: Review & Import
+        </button>
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="finalizeImport()"
+          [disabled]="!canFinalizeImport()"
+          *ngIf="hasDuplicates() && duplicateDecisions().size > 0">
+          <mat-icon>check</mat-icon>
+          Finalize Import
         </button>
       </div>
       <p *ngIf="!canProceedToNextStep() && !requiresManualMapping()" class="next-step-message">
         <mat-icon>info</mat-icon>
         Please review column mapping before proceeding (required: Date and Amount columns)
+      </p>
+      <p *ngIf="hasDuplicates() && duplicateDecisions().size === 0" class="next-step-message">
+        <mat-icon>warning</mat-icon>
+        Please review duplicate transactions before finalizing import
       </p>
     </div>
   </mat-card-content>

@@ -188,7 +188,13 @@ describe('ImportCsvComponent', () => {
         totalRowCount: 0,
         detectedDelimiter: 'Comma',
         detectedEncoding: 'UTF-8',
-        errors: []
+        errors: [],
+        duplicates: [],
+        suggestions: [],
+        columnDetection: null,
+        requiresManualMapping: false,
+        savedMapping: null,
+        availableHeaders: []
       });
 
       const columns = component.getDisplayedColumns();
@@ -214,7 +220,13 @@ describe('ImportCsvComponent', () => {
         totalRowCount: 0,
         detectedDelimiter: 'Comma',
         detectedEncoding: 'UTF-8',
-        errors: []
+        errors: [],
+        duplicates: [],
+        suggestions: [],
+        columnDetection: null,
+        requiresManualMapping: false,
+        savedMapping: null,
+        availableHeaders: []
       });
       component.errorMessage.set('Some error');
 
@@ -278,6 +290,280 @@ describe('ImportCsvComponent', () => {
       expect(component.selectedFile()).toBe(file);
       expect(event.preventDefault).toHaveBeenCalled();
       expect(event.stopPropagation).toHaveBeenCalled();
+    });
+  });
+
+  describe('Duplicate Detection', () => {
+    it('should detect duplicates in preview response', () => {
+      component.previewData.set({
+        headers: ['Date', 'Amount'],
+        sampleRows: [],
+        totalRowCount: 1,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        duplicates: [
+          {
+            transactionId: '123',
+            date: '2025-01-15',
+            payee: 'Whole Foods',
+            amount: 89.50,
+            category: 'Groceries',
+            account: 'Checking'
+          }
+        ],
+        suggestions: [],
+        columnDetection: null,
+        requiresManualMapping: false,
+        savedMapping: null,
+        availableHeaders: []
+      });
+
+      expect(component.hasDuplicates()).toBe(true);
+    });
+
+    it('should not show duplicates when none exist', () => {
+      component.previewData.set({
+        headers: ['Date', 'Amount'],
+        sampleRows: [],
+        totalRowCount: 1,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        duplicates: [],
+        suggestions: [],
+        columnDetection: null,
+        requiresManualMapping: false,
+        savedMapping: null,
+        availableHeaders: []
+      });
+
+      expect(component.hasDuplicates()).toBe(false);
+    });
+
+    it('should count skipped duplicates correctly', () => {
+      const decisions = new Map<number, 'skip' | 'import'>();
+      decisions.set(0, 'skip');
+      decisions.set(1, 'import');
+      decisions.set(2, 'skip');
+      component.duplicateDecisions.set(decisions);
+
+      expect(component.duplicatesSkipped()).toBe(2);
+    });
+
+    it('should load category suggestions into map', () => {
+      component.previewData.set({
+        headers: ['Date', 'Amount'],
+        sampleRows: [],
+        totalRowCount: 2,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        duplicates: [],
+        suggestions: [
+          {
+            transactionIndex: 0,
+            suggestedCategoryId: 'cat-1',
+            categoryName: 'Groceries',
+            confidence: 0.85,
+            matchedPattern: 'WHOLE FOODS'
+          },
+          {
+            transactionIndex: 1,
+            suggestedCategoryId: 'cat-2',
+            categoryName: 'Shopping',
+            confidence: 0.75,
+            matchedPattern: 'AMAZON'
+          }
+        ],
+        columnDetection: null,
+        requiresManualMapping: false,
+        savedMapping: null,
+        availableHeaders: []
+      });
+
+      component.loadCategorySuggestions();
+
+      expect(component.categorySuggestions().size).toBe(2);
+      expect(component.getSuggestionForTransaction(0)?.categoryName).toBe('Groceries');
+      expect(component.getSuggestionForTransaction(1)?.categoryName).toBe('Shopping');
+    });
+  });
+
+  describe('Category Suggestions', () => {
+    beforeEach(() => {
+      component.previewData.set({
+        headers: ['Date', 'Amount'],
+        sampleRows: [],
+        totalRowCount: 1,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        duplicates: [],
+        suggestions: [
+          {
+            transactionIndex: 0,
+            suggestedCategoryId: 'cat-1',
+            categoryName: 'Groceries',
+            confidence: 0.85,
+            matchedPattern: 'WHOLE FOODS'
+          }
+        ],
+        columnDetection: null,
+        requiresManualMapping: false,
+        savedMapping: null,
+        availableHeaders: []
+      });
+      component.loadCategorySuggestions();
+    });
+
+    it('should return confidence class based on confidence level', () => {
+      expect(component.getSuggestionConfidenceClass(0.85)).toBe('confidence-high');
+      expect(component.getSuggestionConfidenceClass(0.65)).toBe('confidence-medium');
+      expect(component.getSuggestionConfidenceClass(0.45)).toBe('confidence-low');
+    });
+
+    it('should accept category suggestion', () => {
+      const suggestion = component.getSuggestionForTransaction(0);
+      expect(suggestion).toBeTruthy();
+
+      component.acceptSuggestion(0, suggestion!);
+
+      expect(component.selectedCategories().get(0)).toBe('cat-1');
+
+      const req = httpMock.expectOne('http://localhost:5000/api/categorize/accept');
+      expect(req.request.method).toBe('POST');
+      req.flush({ success: true });
+    });
+
+    it('should override category suggestion', () => {
+      component.overrideSuggestion(0, 'cat-new', 'WHOLE FOODS');
+
+      expect(component.selectedCategories().get(0)).toBe('cat-new');
+
+      const req = httpMock.expectOne('http://localhost:5000/api/categorize/create-rule');
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        payeePattern: 'WHOLE FOODS',
+        categoryId: 'cat-new',
+        matchType: 'Contains'
+      });
+      req.flush({ success: true });
+    });
+
+    it('should count transactions with suggestions', () => {
+      expect(component.transactionsWithSuggestions()).toBe(1);
+    });
+  });
+
+  describe('Import Summary', () => {
+    it('should calculate import summary correctly', () => {
+      component.previewData.set({
+        headers: ['Date', 'Amount'],
+        sampleRows: [],
+        totalRowCount: 100,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        duplicates: [],
+        suggestions: [],
+        columnDetection: null,
+        requiresManualMapping: false,
+        savedMapping: null,
+        availableHeaders: []
+      });
+
+      const decisions = new Map<number, 'skip' | 'import'>();
+      decisions.set(0, 'skip');
+      decisions.set(1, 'skip');
+      decisions.set(2, 'skip');
+      component.duplicateDecisions.set(decisions);
+
+      component.loadCategorySuggestions();
+
+      const summary = component.importSummary();
+      expect(summary).toBeTruthy();
+      expect(summary!.total).toBe(100);
+      expect(summary!.skipped).toBe(3);
+      expect(summary!.importing).toBe(97);
+    });
+
+    it('should return null when no preview data', () => {
+      component.previewData.set(null);
+
+      expect(component.importSummary()).toBeNull();
+    });
+  });
+
+  describe('Finalize Import', () => {
+    it('should disable finalize when duplicates not reviewed', () => {
+      component.previewData.set({
+        headers: ['Date', 'Amount'],
+        sampleRows: [],
+        totalRowCount: 1,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        duplicates: [
+          {
+            transactionId: '123',
+            date: '2025-01-15',
+            payee: 'Test',
+            amount: 10.00,
+            category: 'Test',
+            account: 'Checking'
+          }
+        ],
+        suggestions: [],
+        columnDetection: {
+          detectedMappings: { Date: 'date', Amount: 'amount' },
+          confidenceScores: { date: 0.95, amount: 0.95 },
+          warnings: [],
+          allRequiredFieldsDetected: true
+        },
+        requiresManualMapping: false,
+        savedMapping: null,
+        availableHeaders: []
+      });
+
+      expect(component.canFinalizeImport()).toBe(false);
+    });
+
+    it('should enable finalize when all duplicates reviewed', () => {
+      component.previewData.set({
+        headers: ['Date', 'Amount'],
+        sampleRows: [],
+        totalRowCount: 1,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        duplicates: [
+          {
+            transactionId: '123',
+            date: '2025-01-15',
+            payee: 'Test',
+            amount: 10.00,
+            category: 'Test',
+            account: 'Checking'
+          }
+        ],
+        suggestions: [],
+        columnDetection: {
+          detectedMappings: { Date: 'date', Amount: 'amount' },
+          confidenceScores: { date: 0.95, amount: 0.95 },
+          warnings: [],
+          allRequiredFieldsDetected: true
+        },
+        requiresManualMapping: false,
+        savedMapping: null,
+        availableHeaders: []
+      });
+
+      const decisions = new Map<number, 'skip' | 'import'>();
+      decisions.set(0, 'skip');
+      component.duplicateDecisions.set(decisions);
+
+      expect(component.canFinalizeImport()).toBe(true);
     });
   });
 });

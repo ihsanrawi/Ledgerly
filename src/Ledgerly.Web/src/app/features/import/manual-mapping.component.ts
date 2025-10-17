@@ -85,11 +85,11 @@ export class ManualMappingComponent {
     private snackBar: MatSnackBar,
     private apiConfig: ApiConfigService
   ) {
-    // Initialize unmapped headers when availableHeaders changes
-    this.initializeMappings();
+    // Component initialization - inputs will be available in ngOnInit
   }
 
   ngOnInit(): void {
+    // Initialize mappings after inputs are set by Angular
     this.initializeMappings();
   }
 

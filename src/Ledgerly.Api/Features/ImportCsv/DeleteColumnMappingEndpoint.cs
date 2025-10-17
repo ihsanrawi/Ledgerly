@@ -1,25 +1,28 @@
 using Wolverine;
+using Wolverine.Http;
 
 namespace Ledgerly.Api.Features.ImportCsv;
 
 /// <summary>
-/// API endpoint for deleting saved column mapping rules.
-/// Story 2.4 - Manual Column Mapping Interface (AC: 6).
+/// Wolverine HTTP endpoint for deleting column mapping rules.
+/// Story 2.4 - Manual Column Mapping Interface (AC: 7).
 /// </summary>
-public static class DeleteColumnMappingEndpoint
+public class DeleteColumnMappingEndpoint
 {
-    public static void MapDeleteColumnMappingEndpoint(this IEndpointRouteBuilder app)
+    /// <summary>
+    /// Delete a saved column mapping rule.
+    /// </summary>
+    /// <param name="id">Mapping ID to delete</param>
+    /// <param name="bus">Wolverine message bus (injected)</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>No content on success</returns>
+    [WolverineDelete("/api/import/mappings/{id}")]
+    public async Task<IResult> Delete(
+        Guid id,
+        IMessageBus bus,
+        CancellationToken ct)
     {
-        app.MapDelete("/api/import/mappings/{id:guid}", async (Guid id, IMessageBus bus, CancellationToken ct) =>
-        {
-            await bus.InvokeAsync(new DeleteColumnMappingCommand { Id = id }, ct);
-            return Results.Ok(new { message = "Mapping deleted successfully" });
-        })
-        .WithName("DeleteColumnMapping")
-        .WithTags("Import")
-        .Produces(200)
-        .Produces(400)
-        .Produces(404)
-        .Produces(500);
+        await bus.InvokeAsync(new DeleteColumnMappingCommand { Id = id }, ct);
+        return Results.NoContent();
     }
 }
