@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace Ledgerly.Api.Common.Data.Entities;
 
 /// <summary>
@@ -41,4 +44,32 @@ public class Transaction
     /// Optional memo/description.
     /// </summary>
     public string? Memo { get; set; }
+
+    /// <summary>
+    /// SHA256 hash computed from Date + Payee + Amount for duplicate detection (Story 2.5).
+    /// Format: Base64-encoded SHA256 hash of "{Date:yyyy-MM-dd}|{Payee.ToLowerInvariant()}|{Amount}".
+    /// </summary>
+    public string Hash { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Computes transaction hash for duplicate detection.
+    /// Uses SHA256 hash of normalized transaction key: date + payee + amount.
+    /// </summary>
+    public static string ComputeTransactionHash(DateTime date, string payee, decimal amount)
+    {
+        var normalizedPayee = payee.Trim().ToLowerInvariant();
+        var hashInput = $"{date:yyyy-MM-dd}|{normalizedPayee}|{amount}";
+
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(hashInput));
+        return Convert.ToBase64String(hashBytes);
+    }
+
+    /// <summary>
+    /// Computes and updates the Hash property for this transaction.
+    /// Should be called before persisting transaction to database.
+    /// </summary>
+    public void UpdateHash()
+    {
+        Hash = ComputeTransactionHash(Date, Payee, Amount);
+    }
 }

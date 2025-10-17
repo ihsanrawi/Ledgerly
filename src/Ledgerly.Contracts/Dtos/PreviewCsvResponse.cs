@@ -37,4 +37,16 @@ public record PreviewCsvResponse
     /// Added in Story 2.4 for manual column mapping.
     /// </summary>
     public string[] AvailableHeaders { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Matched existing transactions flagged as duplicates.
+    /// Added in Story 2.5 for duplicate detection.
+    /// </summary>
+    public List<DuplicateTransactionDto> Duplicates { get; init; } = new();
+
+    /// <summary>
+    /// Category suggestions for each transaction based on ImportRules.
+    /// Added in Story 2.5 for category suggestion.
+    /// </summary>
+    public List<CategorySuggestionDto> Suggestions { get; init; } = new();
 }

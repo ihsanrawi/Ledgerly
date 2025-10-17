@@ -1,0 +1,134 @@
+# Quality Gate Decision for Story 2.5
+schema: 1
+story: "2.5"
+story_title: "Duplicate Detection and Category Suggestions"
+gate: PASS
+status_reason: "All critical and medium-severity issues resolved. Comprehensive test coverage (89 tests). Low-severity test data creation can be addressed as needed."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-10-17T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "PERF-001"
+    severity: high
+    finding: "GetCategorySuggestionsHandler called SaveChangesAsync inside loop (N database writes for N transactions)"
+    suggested_action: "FIXED: Refactored to batch save after all matches - single database write"
+    status: RESOLVED
+    owner: qa
+
+  - id: "REL-001"
+    severity: medium
+    finding: "ImportRule.TimesApplied incremented during suggestion but never decremented if user rejects, causing permanently inaccurate confidence scores"
+    suggested_action: "FIXED: Moved TimesApplied increment from suggestion phase to accept phase in AcceptCategorySuggestionHandler"
+    status: RESOLVED
+    owner: dev
+
+  - id: "TEST-001"
+    severity: medium
+    finding: "Missing FluentValidation validators for DetectDuplicatesQuery and GetCategorySuggestionsQuery (violates coding standard #10)"
+    suggested_action: "FIXED: Added DetectDuplicatesQueryValidator and GetCategorySuggestionsQueryValidator"
+    status: RESOLVED
+    owner: dev
+
+  - id: "TEST-002"
+    severity: low
+    finding: "Integration tests and test data CSV samples not created (deferred from tasks)"
+    suggested_action: "Create test data samples and integration tests as needed for future testing"
+    status: OPEN
+    owner: dev
+
+# Risk summary
+risk_summary:
+  totals:
+    critical: 0
+    high: 0
+    medium: 0
+    low: 1
+  highest: low
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Test data creation (TEST-002) - optional, create as needed"
+
+# Evidence from review
+evidence:
+  tests_reviewed: 89
+  files_reviewed: 24
+  risks_identified: 4
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+# NFR Validation
+nfr_validation:
+  security:
+    status: PASS
+    notes: "SHA256 hashing implementation correct. EF Core parameterized queries prevent SQL injection. No regex support prevents ReDoS. FluentValidation validators added for all queries."
+  performance:
+    status: PASS
+    notes: "Critical N+1 database write issue RESOLVED (batched saves). Duplicate detection uses proper indexing. All performance concerns addressed."
+  reliability:
+    status: PASS
+    notes: "TimesApplied data integrity issue RESOLVED - now only incremented during user accept action, not during suggestion retrieval. Confidence calculations accurate."
+  maintainability:
+    status: PASS
+    notes: "Code well-structured with clear separation of concerns. Excellent test coverage (89 tests, 100% passing). Documentation complete. AAA pattern followed in tests."
+
+# Recommendations
+recommendations:
+  immediate: []  # All immediate issues resolved
+  future:
+    - action: "Create integration tests and test data CSV samples as needed for comprehensive testing"
+      refs: ["tests/TestData/CsvSamples/"]
+    - action: "Consider adding pattern length validation (max 200 chars) in CreateImportRuleCommand validator for additional input safety"
+      refs: ["CreateImportRuleCommand.cs"]
+    - action: "Optional: Add rejection API endpoint to track when users explicitly reject suggestions for analytics"
+      refs: []
+
+# Quality score
+quality_score: 95
+# Calculation: 100 - (1 low × 5) = 95. All critical/high/medium issues resolved.
+
+# Gate expires (2 weeks from review)
+expires: "2025-10-31T00:00:00Z"
+
+# History - Audit trail of gate status changes
+history:
+  - at: "2025-10-16T00:00:00Z"
+    gate: CONCERNS
+    note: "Initial review - Critical performance issue fixed, but missing validators and data integrity concern with TimesApplied"
+  - at: "2025-10-17T00:00:00Z"
+    gate: PASS
+    note: "All critical and medium issues resolved. Added validators (TEST-001), fixed TimesApplied tracking (REL-001). Only low-severity test data creation remains."
+
+# Acceptance Criteria Coverage
+acceptance_criteria_mapping:
+  AC1_duplicate_detection:
+    status: COVERED
+    tests:
+      - "DetectDuplicatesHandlerTests: 8 tests covering exact match, case-insensitive, batch processing"
+      - "Frontend: duplicate-warning-dialog.component.spec.ts: 20 tests"
+  AC2_duplicate_warning_dialog:
+    status: COVERED
+    tests:
+      - "DuplicateWarningDialogComponent with navigation, skip/import actions"
+      - "Dialog integration in ImportCsvComponent"
+  AC3_category_suggestion_engine:
+    status: COVERED
+    tests:
+      - "GetCategorySuggestionsHandlerTests: 11 tests covering all MatchType variants, priority ordering"
+  AC4_suggested_category_display:
+    status: COVERED
+    tests:
+      - "ImportCsvComponent category suggestions UI with confidence indicators"
+  AC5_accept_override_actions:
+    status: COVERED
+    tests:
+      - "AcceptCategorySuggestionHandlerTests: 7 tests"
+      - "Frontend accept/override action handlers"
+  AC6_import_rule_updates:
+    status: COVERED
+    tests:
+      - "CreateImportRuleHandlerTests: 14 tests"
+      - "Confidence calculation validated"

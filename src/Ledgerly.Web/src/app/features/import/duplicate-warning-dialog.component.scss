@@ -1,0 +1,160 @@
+.duplicate-dialog {
+  min-width: 500px;
+  max-width: 600px;
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f57c00;
+
+    .warning-icon {
+      color: #f57c00;
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+  }
+}
+
+.progress-indicator {
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background-color: #fff3e0;
+  border-radius: 4px;
+  text-align: center;
+
+  .progress-text {
+    font-weight: 500;
+    color: #e65100;
+  }
+}
+
+.transaction-card {
+  margin-bottom: 16px;
+
+  mat-card-header {
+    margin-bottom: 16px;
+  }
+
+  mat-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #d32f2f;
+  }
+
+  mat-card-subtitle {
+    color: #757575;
+  }
+}
+
+.transaction-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .detail-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    mat-icon {
+      color: #757575;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .detail-label {
+      font-weight: 500;
+      min-width: 80px;
+      color: #424242;
+    }
+
+    .detail-value {
+      flex: 1;
+      color: #212121;
+
+      &.amount {
+        font-weight: 600;
+        font-size: 16px;
+        color: #1976d2;
+      }
+    }
+  }
+}
+
+.explanation {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background-color: #e3f2fd;
+  border-radius: 4px;
+  margin-bottom: 16px;
+
+  mat-icon {
+    color: #1976d2;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+  }
+
+  p {
+    margin: 0;
+    color: #0d47a1;
+    line-height: 1.5;
+  }
+}
+
+.decision-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+
+    &.skip-icon {
+      color: #d32f2f;
+    }
+
+    &.import-icon {
+      color: #388e3c;
+    }
+  }
+}
+
+mat-dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+
+  .navigation-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  button {
+    mat-icon {
+      margin-right: 4px;
+    }
+
+    &:last-child mat-icon {
+      margin-left: 4px;
+      margin-right: 0;
+    }
+  }
+}

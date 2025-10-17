@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,8 +7,12 @@ import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatSelectModule } from '@angular/material/select';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatDialog } from '@angular/material/dialog';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { ManualMappingComponent } from './manual-mapping.component';
+import { DuplicateWarningDialogComponent } from './duplicate-warning-dialog.component';
 import { ApiConfigService } from '../../core/services/api-config.service';
 
 interface CsvParseError {
@@ -24,6 +28,23 @@ interface ColumnDetectionResult {
   allRequiredFieldsDetected: boolean;
 }
 
+interface DuplicateTransactionDto {
+  transactionId: string;
+  date: string;
+  payee: string;
+  amount: number;
+  category: string;
+  account: string;
+}
+
+interface CategorySuggestionDto {
+  transactionIndex: number;
+  suggestedCategoryId: string;
+  categoryName: string;
+  confidence: number;
+  matchedPattern: string;
+}
+
 interface PreviewCsvResponse {
   headers: string[];
   sampleRows: Record<string, string>[];
@@ -35,6 +56,8 @@ interface PreviewCsvResponse {
   requiresManualMapping: boolean;
   savedMapping?: Record<string, string> | null;
   availableHeaders: string[];
+  duplicates: DuplicateTransactionDto[];
+  suggestions: CategorySuggestionDto[];
 }
 
 @Component({
@@ -49,6 +72,8 @@ interface PreviewCsvResponse {
     MatIconModule,
     MatTooltipModule,
     MatChipsModule,
+    MatSelectModule,
+    MatBadgeModule,
     ManualMappingComponent
   ],
   templateUrl: './import-csv.component.html',
@@ -63,9 +88,50 @@ export class ImportCsvComponent {
   showManualMapping = signal(false);
   finalColumnMapping = signal<Record<string, string> | null>(null);
 
+  // Duplicate detection state
+  duplicateDecisions = signal<Map<number, 'skip' | 'import'>>(new Map());
+
+  // Category suggestions state
+  categorySuggestions = signal<Map<number, CategorySuggestionDto>>(new Map());
+  selectedCategories = signal<Map<number, string>>(new Map());
+
+  // Computed values
+  hasDuplicates = computed(() =>
+    (this.previewData()?.duplicates?.length ?? 0) > 0
+  );
+
+  duplicatesSkipped = computed(() => {
+    let count = 0;
+    this.duplicateDecisions().forEach(decision => {
+      if (decision === 'skip') count++;
+    });
+    return count;
+  });
+
+  transactionsWithSuggestions = computed(() =>
+    this.categorySuggestions().size
+  );
+
+  importSummary = computed(() => {
+    const preview = this.previewData();
+    if (!preview) return null;
+
+    const total = preview.totalRowCount;
+    const skipped = this.duplicatesSkipped();
+    const withSuggestions = this.transactionsWithSuggestions();
+
+    return {
+      total,
+      skipped,
+      withSuggestions,
+      importing: total - skipped
+    };
+  });
+
   constructor(
     private http: HttpClient,
-    private apiConfig: ApiConfigService
+    private apiConfig: ApiConfigService,
+    private dialog: MatDialog
   ) {}
 
   onDragOver(event: DragEvent): void {
@@ -172,6 +238,10 @@ export class ImportCsvComponent {
     return preview?.headers || [];
   }
 
+  getDisplayedColumnsWithCategory(): string[] {
+    return [...this.getDisplayedColumns(), 'category'];
+  }
+
   formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -247,11 +317,140 @@ export class ImportCsvComponent {
 
   onMappingComplete(mapping: Record<string, string>): void {
     this.finalColumnMapping.set(mapping);
-    // TODO: Proceed to next step in import workflow (duplicate detection/category suggestions)
-    console.log('Column mapping complete:', mapping);
+    this.showManualMapping.set(false);
+    // After column mapping, trigger duplicate detection
+    this.checkForDuplicates();
   }
 
   backToPreview(): void {
     this.showManualMapping.set(false);
+  }
+
+  // Duplicate detection workflow
+  checkForDuplicates(): void {
+    const preview = this.previewData();
+    if (!preview || !preview.duplicates || preview.duplicates.length === 0) {
+      // No duplicates, proceed to category suggestions
+      this.loadCategorySuggestions();
+      return;
+    }
+
+    // Open duplicate warning dialog
+    const dialogRef = this.dialog.open(DuplicateWarningDialogComponent, {
+      width: '600px',
+      disableClose: true,
+      data: {
+        duplicates: preview.duplicates,
+        parsedTransactions: preview.sampleRows
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(decisions => {
+      if (decisions) {
+        // Store user decisions
+        const decisionMap = new Map<number, 'skip' | 'import'>();
+        decisions.forEach((decision: { transactionIndex: number; action: 'skip' | 'import' }) => {
+          decisionMap.set(decision.transactionIndex, decision.action);
+        });
+        this.duplicateDecisions.set(decisionMap);
+
+        // After duplicate review, load category suggestions
+        this.loadCategorySuggestions();
+      }
+    });
+  }
+
+  // Category suggestions workflow
+  loadCategorySuggestions(): void {
+    const preview = this.previewData();
+    if (!preview || !preview.suggestions) return;
+
+    // Store suggestions in a map by transaction index
+    const suggestionMap = new Map<number, CategorySuggestionDto>();
+    preview.suggestions.forEach(suggestion => {
+      suggestionMap.set(suggestion.transactionIndex, suggestion);
+    });
+    this.categorySuggestions.set(suggestionMap);
+  }
+
+  getSuggestionForTransaction(index: number): CategorySuggestionDto | null {
+    return this.categorySuggestions().get(index) || null;
+  }
+
+  getSuggestionConfidenceClass(confidence: number): string {
+    if (confidence >= 0.8) return 'confidence-high';
+    if (confidence >= 0.6) return 'confidence-medium';
+    return 'confidence-low';
+  }
+
+  acceptSuggestion(transactionIndex: number, suggestion: CategorySuggestionDto): void {
+    // Store the accepted category
+    this.selectedCategories.update(map => {
+      const newMap = new Map(map);
+      newMap.set(transactionIndex, suggestion.suggestedCategoryId);
+      return newMap;
+    });
+
+    // Call API to update ImportRule confidence
+    this.http.post(this.apiConfig.getApiUrl('/api/categorize/accept'), {
+      ruleId: suggestion.suggestedCategoryId,
+      transactionPayee: suggestion.matchedPattern
+    }).subscribe({
+      next: () => {
+        // Success - confidence updated
+      },
+      error: (error) => {
+        console.error('Failed to accept suggestion:', error);
+      }
+    });
+  }
+
+  overrideSuggestion(transactionIndex: number, newCategoryId: string, payeePattern: string): void {
+    // Store the overridden category
+    this.selectedCategories.update(map => {
+      const newMap = new Map(map);
+      newMap.set(transactionIndex, newCategoryId);
+      return newMap;
+    });
+
+    // Call API to create new ImportRule
+    this.http.post(this.apiConfig.getApiUrl('/api/categorize/create-rule'), {
+      payeePattern,
+      categoryId: newCategoryId,
+      matchType: 'Contains'
+    }).subscribe({
+      next: () => {
+        // Success - new rule created
+      },
+      error: (error) => {
+        console.error('Failed to create rule:', error);
+      }
+    });
+  }
+
+  canFinalizeImport(): boolean {
+    const preview = this.previewData();
+    if (!preview) return false;
+
+    // All duplicates must be reviewed
+    if (this.hasDuplicates() && this.duplicateDecisions().size === 0) {
+      return false;
+    }
+
+    // All required fields must be detected
+    if (!this.canProceedToNextStep()) {
+      return false;
+    }
+
+    return true;
+  }
+
+  finalizeImport(): void {
+    // Filter out skipped duplicates and prepare for final import
+    const summary = this.importSummary();
+    if (!summary) return;
+
+    // TODO: Navigate to next step (transaction confirmation) - Story 2.6
+    console.log(`Importing ${summary.importing} transactions (${summary.skipped} duplicates skipped, ${summary.withSuggestions} with suggested categories)`);
   }
 }

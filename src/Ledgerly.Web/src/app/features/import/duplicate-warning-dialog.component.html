@@ -1,0 +1,103 @@
+<div class="duplicate-dialog">
+  <h2 mat-dialog-title>
+    <mat-icon class="warning-icon">warning</mat-icon>
+    Duplicate Transactions Detected
+  </h2>
+
+  <mat-dialog-content>
+    <!-- Progress Indicator -->
+    <div class="progress-indicator">
+      <span class="progress-text">
+        Reviewing duplicate {{ currentIndex() + 1 }} of {{ totalDuplicates() }}
+      </span>
+    </div>
+
+    <!-- Matched Transaction Details -->
+    <mat-card class="transaction-card">
+      <mat-card-header>
+        <mat-card-title>Existing Transaction Found</mat-card-title>
+        <mat-card-subtitle>This transaction already exists in your ledger</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="transaction-details">
+          <div class="detail-row">
+            <mat-icon>event</mat-icon>
+            <span class="detail-label">Date:</span>
+            <span class="detail-value">{{ formatDate(currentDuplicate().date) }}</span>
+          </div>
+
+          <div class="detail-row">
+            <mat-icon>person</mat-icon>
+            <span class="detail-label">Payee:</span>
+            <span class="detail-value">{{ currentDuplicate().payee }}</span>
+          </div>
+
+          <div class="detail-row">
+            <mat-icon>attach_money</mat-icon>
+            <span class="detail-label">Amount:</span>
+            <span class="detail-value amount">{{ formatCurrency(currentDuplicate().amount) }}</span>
+          </div>
+
+          <div class="detail-row">
+            <mat-icon>category</mat-icon>
+            <span class="detail-label">Category:</span>
+            <span class="detail-value">{{ currentDuplicate().category }}</span>
+          </div>
+
+          <div class="detail-row">
+            <mat-icon>account_balance</mat-icon>
+            <span class="detail-label">Account:</span>
+            <span class="detail-value">{{ currentDuplicate().account }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Explanation -->
+    <div class="explanation">
+      <mat-icon>info</mat-icon>
+      <p>
+        This transaction has the same date, payee, and amount as an existing transaction.
+        Skip to avoid duplication, or import anyway if this is a legitimate duplicate transaction.
+      </p>
+    </div>
+
+    <!-- Current Decision Status -->
+    <div *ngIf="getDecisionForCurrent()" class="decision-status">
+      <mat-icon [class.skip-icon]="getDecisionForCurrent() === 'skip'"
+                [class.import-icon]="getDecisionForCurrent() === 'import'">
+        {{ getDecisionForCurrent() === 'skip' ? 'block' : 'check_circle' }}
+      </mat-icon>
+      <span>
+        {{ getDecisionForCurrent() === 'skip' ? 'Marked to Skip' : 'Marked to Import' }}
+      </span>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <!-- Navigation Buttons -->
+    <div class="navigation-buttons">
+      <button mat-button (click)="previous()" [disabled]="!hasPrevious()">
+        <mat-icon>arrow_back</mat-icon>
+        Previous
+      </button>
+      <button mat-button (click)="next()" [disabled]="!hasNext()">
+        Next
+        <mat-icon>arrow_forward</mat-icon>
+      </button>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <button mat-raised-button color="warn" (click)="skipDuplicate()">
+        <mat-icon>block</mat-icon>
+        Skip Duplicate
+      </button>
+      <button mat-raised-button color="primary" (click)="importAnyway()">
+        <mat-icon>check_circle</mat-icon>
+        Import Anyway
+      </button>
+    </div>
+  </mat-dialog-actions>
+</div>

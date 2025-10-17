@@ -76,7 +76,8 @@ public class ColumnMappingRule
     /// <summary>
     /// Row version for optimistic concurrency control.
     /// Prevents race conditions when multiple users/sessions update same mapping.
+    /// NOTE: SQLite generates this automatically when configured with IsRowVersion().
     /// </summary>
     [Timestamp]
-    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    public byte[]? RowVersion { get; set; }
 }
