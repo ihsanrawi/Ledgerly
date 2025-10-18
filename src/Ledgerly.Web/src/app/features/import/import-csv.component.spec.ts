@@ -3,6 +3,13 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ImportCsvComponent } from './import-csv.component';
 
+// Mock crypto.randomUUID for tests
+Object.defineProperty(globalThis, 'crypto', {
+  value: {
+    randomUUID: () => 'test-uuid-12345'
+  }
+});
+
 describe('ImportCsvComponent', () => {
   let component: ImportCsvComponent;
   let fixture: ComponentFixture<ImportCsvComponent>;
@@ -485,7 +492,7 @@ describe('ImportCsvComponent', () => {
       expect(summary).toBeTruthy();
       expect(summary!.total).toBe(100);
       expect(summary!.skipped).toBe(3);
-      expect(summary!.importing).toBe(97);
+      expect(summary!.readyToImport).toBe(97);
     });
 
     it('should return null when no preview data', () => {
@@ -564,6 +571,403 @@ describe('ImportCsvComponent', () => {
       component.duplicateDecisions.set(decisions);
 
       expect(component.canFinalizeImport()).toBe(true);
+    });
+  });
+
+  // Story 2.6: Import Confirmation Tests
+  describe('Story 2.6: Import Confirmation Preview', () => {
+    beforeEach(() => {
+      // Setup mock preview data
+      component.previewData.set({
+        headers: ['Date', 'Payee', 'Amount'],
+        sampleRows: [
+          { 'Date': '2025-01-01', 'Payee': 'Whole Foods', 'Amount': '45.23' },
+          { 'Date': '2025-01-02', 'Payee': 'Amazon', 'Amount': '89.99' },
+          { 'Date': '2025-01-03', 'Payee': 'Starbucks', 'Amount': '5.50' }
+        ],
+        totalRowCount: 3,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        duplicates: [],
+        suggestions: [
+          {
+            transactionIndex: 0,
+            suggestedCategoryId: 'expenses:groceries',
+            categoryName: 'Groceries',
+            confidence: 0.9,
+            matchedPattern: 'Whole Foods'
+          }
+        ],
+        columnDetection: {
+          detectedMappings: { Date: 'date', Payee: 'payee', Amount: 'amount' },
+          confidenceScores: { date: 0.95, payee: 0.90, amount: 0.95 },
+          warnings: [],
+          allRequiredFieldsDetected: true
+        },
+        requiresManualMapping: false,
+        savedMapping: null,
+        availableHeaders: ['Date', 'Payee', 'Amount']
+      });
+
+      // Load category suggestions
+      const suggestionMap = new Map();
+      suggestionMap.set(0, {
+        transactionIndex: 0,
+        suggestedCategoryId: 'expenses:groceries',
+        categoryName: 'Groceries',
+        confidence: 0.9,
+        matchedPattern: 'Whole Foods'
+      });
+      component.categorySuggestions.set(suggestionMap);
+    });
+
+    it('should show confirmation preview when finalizeImport is called', () => {
+      expect(component.showConfirmationPreview()).toBe(false);
+
+      component.finalizeImport();
+
+      expect(component.showConfirmationPreview()).toBe(true);
+    });
+
+    it('should hide confirmation preview when back button is clicked', () => {
+      component.showConfirmationPreview.set(true);
+
+      component.backToPreviewFromConfirmation();
+
+      expect(component.showConfirmationPreview()).toBe(false);
+    });
+
+    it('should update edited payee when onPayeeEdit is called', () => {
+      component.onPayeeEdit(0, 'Modified Payee');
+
+      expect(component.editedPayees().get(0)).toBe('Modified Payee');
+    });
+
+    it('should update edited category when onCategoryEdit is called', () => {
+      component.onCategoryEdit(1, 'expenses:utilities');
+
+      expect(component.editedCategories().get(1)).toBe('expenses:utilities');
+    });
+
+    it('should return edited payee in getCurrentPayee', () => {
+      component.editedPayees.set(new Map([[0, 'Edited Payee']]));
+
+      const payee = component.getCurrentPayee(0, 'Original Payee');
+
+      expect(payee).toBe('Edited Payee');
+    });
+
+    it('should return original payee if not edited', () => {
+      const payee = component.getCurrentPayee(0, 'Original Payee');
+
+      expect(payee).toBe('Original Payee');
+    });
+
+    it('should return edited category in getCurrentCategory', () => {
+      component.editedCategories.set(new Map([[0, 'expenses:shopping']]));
+
+      const category = component.getCurrentCategory(0);
+
+      expect(category).toBe('expenses:shopping');
+    });
+
+    it('should return selected category if no edit exists', () => {
+      component.selectedCategories.set(new Map([[0, 'expenses:entertainment']]));
+
+      const category = component.getCurrentCategory(0);
+
+      expect(category).toBe('expenses:entertainment');
+    });
+
+    it('should return suggested category if no edit or selection exists', () => {
+      const category = component.getCurrentCategory(0);
+
+      expect(category).toBe('expenses:groceries');
+    });
+
+    it('should return empty string if no category assigned', () => {
+      const category = component.getCurrentCategory(1);
+
+      expect(category).toBe('');
+    });
+
+    it('should identify duplicate transactions correctly', () => {
+      const decisions = new Map<number, 'skip' | 'import'>();
+      decisions.set(0, 'skip');
+      component.duplicateDecisions.set(decisions);
+
+      expect(component.isTransactionDuplicate(0)).toBe(true);
+      expect(component.isTransactionDuplicate(1)).toBe(false);
+    });
+
+    it('should calculate transactions needing categories', () => {
+      // Transaction 0 has suggestion, 1 and 2 don't
+      const needsCategorization = component.transactionsNeedingCategories();
+
+      expect(needsCategorization).toBe(2);
+    });
+
+    it('should validate import is invalid when transactions missing categories', () => {
+      expect(component.isImportValid()).toBe(false);
+    });
+
+    it('should validate import is valid when all transactions have categories', () => {
+      component.editedCategories.set(new Map([
+        [1, 'expenses:shopping'],
+        [2, 'expenses:entertainment']
+      ]));
+
+      expect(component.isImportValid()).toBe(true);
+    });
+
+    it('should calculate import summary correctly', () => {
+      component.editedCategories.set(new Map([
+        [1, 'expenses:shopping'],
+        [2, 'expenses:entertainment']
+      ]));
+
+      const summary = component.importSummary();
+
+      expect(summary).toBeTruthy();
+      expect(summary!.total).toBe(3);
+      expect(summary!.skipped).toBe(0);
+      expect(summary!.withSuggestions).toBe(1);
+      expect(summary!.readyToImport).toBe(3);
+      expect(summary!.needsCategorization).toBe(0);
+    });
+
+    it('should send confirm import request with correct data', (done) => {
+      component.selectedFile.set(new File(['test'], 'test.csv', { type: 'text/csv' }));
+      component.editedPayees.set(new Map([[0, 'Edited Whole Foods']]));
+      component.editedCategories.set(new Map([
+        [1, 'expenses:shopping'],
+        [2, 'expenses:entertainment']
+      ]));
+
+      component.confirmImport();
+
+      const req = httpMock.expectOne('http://localhost:5000/api/import/confirm');
+      expect(req.request.method).toBe('POST');
+
+      const body = req.request.body;
+      expect(body.transactions).toBeDefined();
+      expect(body.transactions.length).toBe(3);
+      expect(body.transactions[0].payee).toBe('Edited Whole Foods');
+      expect(body.transactions[0].category).toBe('expenses:groceries');
+      expect(body.transactions[1].category).toBe('expenses:shopping');
+      expect(body.transactions[2].category).toBe('expenses:entertainment');
+      expect(body.fileName).toBe('test.csv');
+
+      const mockResponse = {
+        success: true,
+        transactionsImported: 3,
+        duplicatesSkipped: 0,
+        transactionIds: ['id1', 'id2', 'id3']
+      };
+
+      req.flush(mockResponse);
+
+      setTimeout(() => {
+        expect(component.importing()).toBe(false);
+        expect(component.selectedFile()).toBeNull();
+        expect(component.previewData()).toBeNull();
+        done();
+      }, 100);
+    });
+
+    it('should filter out duplicate transactions in confirm import', (done) => {
+      component.selectedFile.set(new File(['test'], 'test.csv', { type: 'text/csv' }));
+      component.editedCategories.set(new Map([
+        [0, 'expenses:groceries'],
+        [1, 'expenses:shopping'],
+        [2, 'expenses:entertainment']
+      ]));
+
+      const decisions = new Map<number, 'skip' | 'import'>();
+      decisions.set(1, 'skip');
+      component.duplicateDecisions.set(decisions);
+
+      component.confirmImport();
+
+      const req = httpMock.expectOne('http://localhost:5000/api/import/confirm');
+      const body = req.request.body;
+
+      expect(body.transactions[1].isDuplicate).toBe(true);
+
+      req.flush({
+        success: true,
+        transactionsImported: 2,
+        duplicatesSkipped: 1,
+        transactionIds: ['id1', 'id3']
+      });
+
+      setTimeout(() => {
+        done();
+      }, 100);
+    });
+
+    it('should handle confirm import API error', (done) => {
+      component.selectedFile.set(new File(['test'], 'test.csv', { type: 'text/csv' }));
+      component.editedCategories.set(new Map([
+        [0, 'expenses:groceries'],
+        [1, 'expenses:shopping'],
+        [2, 'expenses:entertainment']
+      ]));
+
+      component.confirmImport();
+
+      const req = httpMock.expectOne('http://localhost:5000/api/import/confirm');
+      req.flush(
+        { message: 'Validation error: Missing required fields' },
+        { status: 400, statusText: 'Bad Request' }
+      );
+
+      setTimeout(() => {
+        expect(component.importing()).toBe(false);
+        // Component should still have preview data (not reset on error)
+        expect(component.previewData()).toBeTruthy();
+        done();
+      }, 100);
+    });
+
+    it('should reset import state after successful import', (done) => {
+      component.selectedFile.set(new File(['test'], 'test.csv', { type: 'text/csv' }));
+      component.showConfirmationPreview.set(true);
+      component.editedPayees.set(new Map([[0, 'Test']]));
+      component.editedCategories.set(new Map([
+        [0, 'expenses:groceries'],
+        [1, 'expenses:shopping'],
+        [2, 'expenses:entertainment']
+      ]));
+
+      component.confirmImport();
+
+      const req = httpMock.expectOne('http://localhost:5000/api/import/confirm');
+      req.flush({
+        success: true,
+        transactionsImported: 3,
+        duplicatesSkipped: 0,
+        transactionIds: ['id1', 'id2', 'id3']
+      });
+
+      setTimeout(() => {
+        expect(component.selectedFile()).toBeNull();
+        expect(component.previewData()).toBeNull();
+        expect(component.showConfirmationPreview()).toBe(false);
+        expect(component.editedPayees().size).toBe(0);
+        expect(component.editedCategories().size).toBe(0);
+        done();
+      }, 100);
+    });
+
+    // P1 Test: Explicit test for success snackbar with dashboard navigation (QA Gap)
+    it('should display success snackbar with dashboard navigation button on successful import', (done) => {
+      component.selectedFile.set(new File(['test'], 'test.csv', { type: 'text/csv' }));
+      component.previewData.set({
+        headers: ['Date', 'Payee', 'Amount'],
+        sampleRows: [{ Date: '2025-01-15', Payee: 'Test Store', Amount: '50.00' }],
+        totalRowCount: 1,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        requiresManualMapping: false,
+        availableHeaders: ['Date', 'Payee', 'Amount'],
+        duplicates: [],
+        suggestions: []
+      });
+      component.showConfirmationPreview.set(true);
+
+      // Spy on snackbar to verify it's called with correct parameters
+      const snackBarSpy = jest.spyOn(component['snackBar'], 'open');
+      const routerSpy = jest.spyOn(component['router'], 'navigate');
+
+      component.confirmImport();
+
+      const req = httpMock.expectOne('http://localhost:5000/api/import/confirm');
+      req.flush({
+        success: true,
+        transactionsImported: 1,
+        duplicatesSkipped: 0,
+        transactionIds: ['guid1']
+      });
+
+      setTimeout(() => {
+        // Verify snackbar was called with success message and "View Dashboard" action
+        expect(snackBarSpy).toHaveBeenCalledWith(
+          'Imported 1 transactions successfully',
+          'View Dashboard',
+          expect.objectContaining({
+            duration: 10000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+            panelClass: ['success-snackbar']
+          })
+        );
+
+        // Verify snackbar returns a ref with onAction method
+        const snackBarRef = snackBarSpy.mock.results[0].value;
+        expect(snackBarRef).toBeDefined();
+        expect(snackBarRef.onAction).toBeDefined();
+
+        // Trigger the action button to verify navigation
+        if (snackBarRef && snackBarRef.onAction) {
+          snackBarRef.onAction().subscribe(() => {
+            expect(routerSpy).toHaveBeenCalledWith(['/dashboard']);
+            done();
+          });
+        } else {
+          done();
+        }
+      }, 100);
+    });
+
+    // P1 Test: Explicit test for error snackbar with retry button (QA Gap)
+    it('should display error snackbar with retry button on import failure', (done) => {
+      component.selectedFile.set(new File(['test'], 'test.csv', { type: 'text/csv' }));
+      component.previewData.set({
+        headers: ['Date', 'Payee', 'Amount'],
+        sampleRows: [{ Date: '2025-01-15', Payee: 'Test Store', Amount: '50.00' }],
+        totalRowCount: 1,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        requiresManualMapping: false,
+        availableHeaders: ['Date', 'Payee', 'Amount'],
+        duplicates: [],
+        suggestions: []
+      });
+      component.showConfirmationPreview.set(true);
+
+      // Spy on snackbar to verify error handling
+      const snackBarSpy = jest.spyOn(component['snackBar'], 'open');
+
+      component.confirmImport();
+
+      const req = httpMock.expectOne('http://localhost:5000/api/import/confirm');
+      req.flush(
+        { message: 'Import validation failed: 3 transactions missing categories' },
+        { status: 400, statusText: 'Bad Request' }
+      );
+
+      setTimeout(() => {
+        // Verify error snackbar was called with error message and "Retry" action
+        expect(snackBarSpy).toHaveBeenCalledWith(
+          'Import validation failed: 3 transactions missing categories',
+          'Retry',
+          expect.objectContaining({
+            duration: 10000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+            panelClass: ['error-snackbar']
+          })
+        );
+
+        // Verify component state is not reset (preview remains for retry)
+        expect(component.previewData()).not.toBeNull();
+        expect(component.showConfirmationPreview()).toBe(true);
+        done();
+      }, 100);
     });
   });
 });

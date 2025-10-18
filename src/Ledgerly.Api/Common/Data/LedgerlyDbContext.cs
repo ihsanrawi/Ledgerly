@@ -39,6 +39,16 @@ public class LedgerlyDbContext : DbContext
     /// </summary>
     public DbSet<Transaction> Transactions => Set<Transaction>();
 
+    /// <summary>
+    /// CSV import audit records (Story 2.6).
+    /// </summary>
+    public DbSet<CsvImport> CsvImports => Set<CsvImport>();
+
+    /// <summary>
+    /// Hledger file modification audit trail (Story 2.6).
+    /// </summary>
+    public DbSet<HledgerFileAudit> HledgerFileAudits => Set<HledgerFileAudit>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -86,6 +96,43 @@ public class LedgerlyDbContext : DbContext
             entity.Property(e => e.Account).HasMaxLength(200).IsRequired();
             entity.Property(e => e.CategoryAccount).HasMaxLength(200).IsRequired();
             entity.Property(e => e.Hash).HasMaxLength(44).IsRequired(); // Base64 SHA256 = 44 chars
+        });
+
+        // Story 2.6: CsvImport audit configuration
+        modelBuilder.Entity<CsvImport>(entity =>
+        {
+            entity.ToTable("CsvImports");
+            entity.HasKey(e => e.Id);
+
+            // Index on ImportedAt for chronological queries
+            entity.HasIndex(e => e.ImportedAt);
+
+            // Index on UserId for user-specific import history
+            entity.HasIndex(e => e.UserId);
+
+            entity.Property(e => e.FileName).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.FileHash).HasMaxLength(64).IsRequired(); // SHA256 hex = 64 chars
+        });
+
+        // Story 2.6: HledgerFileAudit configuration
+        modelBuilder.Entity<HledgerFileAudit>(entity =>
+        {
+            entity.ToTable("HledgerFileAudits");
+            entity.HasKey(e => e.Id);
+
+            // Index on Timestamp for chronological queries
+            entity.HasIndex(e => e.Timestamp);
+
+            // Index on Operation for filtering by operation type
+            entity.HasIndex(e => e.Operation);
+
+            // Index on UserId for user-specific audit trail
+            entity.HasIndex(e => e.UserId);
+
+            entity.Property(e => e.FileHashBefore).HasMaxLength(64).IsRequired();
+            entity.Property(e => e.FileHashAfter).HasMaxLength(64).IsRequired();
+            entity.Property(e => e.FilePath).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.BalanceChecksum).HasPrecision(18, 2);
         });
     }
 }

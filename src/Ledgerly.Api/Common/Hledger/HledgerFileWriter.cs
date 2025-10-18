@@ -10,7 +10,7 @@ namespace Ledgerly.Api.Common.Hledger;
 /// <summary>
 /// Writes transactions to .hledger files with atomic operations and backup support.
 /// </summary>
-public class HledgerFileWriter
+public class HledgerFileWriter : IHledgerFileWriter
 {
     private readonly HledgerProcessRunner _processRunner;
     private readonly TransactionFormatter _formatter;
@@ -61,6 +61,43 @@ public class HledgerFileWriter
                 filePath);
 
             return await AppendTransactionWithRetryAsync(transaction, filePath);
+        }
+    }
+
+    /// <summary>
+    /// Appends multiple transactions to the hledger file in a single atomic operation.
+    /// Significantly more efficient than individual AppendTransactionAsync calls.
+    /// Story 2.6: Import Preview and Confirmation
+    /// </summary>
+    /// <param name="transactions">List of transactions to append.</param>
+    /// <param name="filePath">Path to the .hledger file.</param>
+    /// <param name="correlationId">Optional correlation ID for tracing.</param>
+    /// <returns>WriteResult containing file hashes before and after write.</returns>
+    public async Task<BulkWriteResult> BulkAppendAsync(
+        List<Transaction> transactions,
+        string filePath,
+        string? correlationId = null)
+    {
+        if (transactions == null || transactions.Count == 0)
+        {
+            throw new ArgumentException("Transaction list cannot be null or empty.", nameof(transactions));
+        }
+
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            throw new ArgumentException("File path cannot be empty.", nameof(filePath));
+        }
+
+        var actualCorrelationId = correlationId ?? Guid.NewGuid().ToString();
+
+        using (LogContext.PushProperty("CorrelationId", actualCorrelationId))
+        {
+            _logger.LogInformation(
+                "Bulk appending {TransactionCount} transactions to {FilePath}",
+                transactions.Count,
+                filePath);
+
+            return await BulkAppendInternalAsync(transactions, filePath);
         }
     }
 
@@ -382,4 +419,115 @@ public class HledgerFileWriter
             _logger.LogWarning(ex, "Failed to delete temp file: {TempPath}", tempPath);
         }
     }
+
+    private async Task<BulkWriteResult> BulkAppendInternalAsync(List<Transaction> transactions, string filePath)
+    {
+        var tempPath = GetTempPath(filePath);
+        var backupPath = GetBackupPath(filePath);
+
+        try
+        {
+            // Read existing file content
+            var existingContent = await ReadExistingFileAsync(filePath);
+
+            // Calculate SHA256 hash before
+            var hashBefore = CalculateSha256(existingContent);
+
+            _logger.LogDebug("File hash before bulk write: {Hash}", hashBefore);
+
+            // Parse existing account declarations
+            var existingAccounts = ParseAccountDeclarations(existingContent);
+
+            // Get all unique accounts from all transactions
+            var allAccounts = new HashSet<string>(existingAccounts);
+            foreach (var transaction in transactions)
+            {
+                var transactionAccounts = _formatter.GetAccountsFromTransaction(transaction);
+                foreach (var account in transactionAccounts)
+                {
+                    allAccounts.Add(account);
+                }
+            }
+
+            // Format all transactions
+            var sb = new StringBuilder();
+            foreach (var transaction in transactions)
+            {
+                var formattedTransaction = _formatter.FormatTransaction(transaction);
+                sb.Append(formattedTransaction);
+
+                // Ensure blank line between transactions
+                if (!formattedTransaction.EndsWith("\n\n"))
+                {
+                    sb.AppendLine();
+                }
+            }
+
+            // Build new file content: declarations + existing content + all new transactions
+            var newContent = BuildFileContent(allAccounts, existingContent, sb.ToString());
+
+            // Write to temp file
+            await File.WriteAllTextAsync(tempPath, newContent, Encoding.UTF8);
+
+            _logger.LogDebug("Wrote {Count} transactions to temp file: {TempPath}", transactions.Count, tempPath);
+
+            // Validate with hledger check
+            await ValidateTempFileAsync(tempPath);
+
+            // Create backup of original file (if it exists)
+            if (File.Exists(filePath))
+            {
+                File.Copy(filePath, backupPath, overwrite: true);
+                _logger.LogDebug("Created backup: {BackupPath}", backupPath);
+            }
+
+            // Atomic rename: temp -> actual
+            File.Move(tempPath, filePath, overwrite: true);
+
+            _logger.LogDebug("Atomically moved temp file to: {FilePath}", filePath);
+
+            // Calculate SHA256 hash after
+            var hashAfter = CalculateSha256(newContent);
+
+            _logger.LogInformation(
+                "Successfully bulk appended {Count} transactions. Hash: {HashBefore} -> {HashAfter}",
+                transactions.Count,
+                hashBefore,
+                hashAfter);
+
+            return new BulkWriteResult
+            {
+                Success = true,
+                FileHashBefore = hashBefore,
+                FileHashAfter = hashAfter,
+                TransactionsWritten = transactions.Count
+            };
+        }
+        catch (HledgerValidationException)
+        {
+            // Validation failed, clean up temp file
+            CleanupTempFile(tempPath);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Unexpected error, clean up temp file
+            CleanupTempFile(tempPath);
+
+            _logger.LogError(ex, "Failed to bulk append transactions to {FilePath}", filePath);
+            throw;
+        }
+    }
+}
+
+/// <summary>
+/// Result of a bulk write operation to .hledger file.
+/// Story 2.6: Import Preview and Confirmation
+/// </summary>
+public class BulkWriteResult
+{
+    public bool Success { get; init; }
+    public string FileHashBefore { get; init; } = string.Empty;
+    public string FileHashAfter { get; init; } = string.Empty;
+    public int TransactionsWritten { get; init; }
 }
