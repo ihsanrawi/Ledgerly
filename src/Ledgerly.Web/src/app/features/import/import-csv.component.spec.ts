@@ -3,6 +3,13 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ImportCsvComponent } from './import-csv.component';
 
+// Mock crypto.randomUUID for tests
+Object.defineProperty(globalThis, 'crypto', {
+  value: {
+    randomUUID: () => 'test-uuid-12345'
+  }
+});
+
 describe('ImportCsvComponent', () => {
   let component: ImportCsvComponent;
   let fixture: ComponentFixture<ImportCsvComponent>;
@@ -485,7 +492,7 @@ describe('ImportCsvComponent', () => {
       expect(summary).toBeTruthy();
       expect(summary!.total).toBe(100);
       expect(summary!.skipped).toBe(3);
-      expect(summary!.importing).toBe(97);
+      expect(summary!.readyToImport).toBe(97);
     });
 
     it('should return null when no preview data', () => {
@@ -850,6 +857,115 @@ describe('ImportCsvComponent', () => {
         expect(component.showConfirmationPreview()).toBe(false);
         expect(component.editedPayees().size).toBe(0);
         expect(component.editedCategories().size).toBe(0);
+        done();
+      }, 100);
+    });
+
+    // P1 Test: Explicit test for success snackbar with dashboard navigation (QA Gap)
+    it('should display success snackbar with dashboard navigation button on successful import', (done) => {
+      component.selectedFile.set(new File(['test'], 'test.csv', { type: 'text/csv' }));
+      component.previewData.set({
+        headers: ['Date', 'Payee', 'Amount'],
+        sampleRows: [{ Date: '2025-01-15', Payee: 'Test Store', Amount: '50.00' }],
+        totalRowCount: 1,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        requiresManualMapping: false,
+        availableHeaders: ['Date', 'Payee', 'Amount'],
+        duplicates: [],
+        suggestions: []
+      });
+      component.showConfirmationPreview.set(true);
+
+      // Spy on snackbar to verify it's called with correct parameters
+      const snackBarSpy = jest.spyOn(component['snackBar'], 'open');
+      const routerSpy = jest.spyOn(component['router'], 'navigate');
+
+      component.confirmImport();
+
+      const req = httpMock.expectOne('http://localhost:5000/api/import/confirm');
+      req.flush({
+        success: true,
+        transactionsImported: 1,
+        duplicatesSkipped: 0,
+        transactionIds: ['guid1']
+      });
+
+      setTimeout(() => {
+        // Verify snackbar was called with success message and "View Dashboard" action
+        expect(snackBarSpy).toHaveBeenCalledWith(
+          'Imported 1 transactions successfully',
+          'View Dashboard',
+          expect.objectContaining({
+            duration: 10000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+            panelClass: ['success-snackbar']
+          })
+        );
+
+        // Verify snackbar returns a ref with onAction method
+        const snackBarRef = snackBarSpy.mock.results[0].value;
+        expect(snackBarRef).toBeDefined();
+        expect(snackBarRef.onAction).toBeDefined();
+
+        // Trigger the action button to verify navigation
+        if (snackBarRef && snackBarRef.onAction) {
+          snackBarRef.onAction().subscribe(() => {
+            expect(routerSpy).toHaveBeenCalledWith(['/dashboard']);
+            done();
+          });
+        } else {
+          done();
+        }
+      }, 100);
+    });
+
+    // P1 Test: Explicit test for error snackbar with retry button (QA Gap)
+    it('should display error snackbar with retry button on import failure', (done) => {
+      component.selectedFile.set(new File(['test'], 'test.csv', { type: 'text/csv' }));
+      component.previewData.set({
+        headers: ['Date', 'Payee', 'Amount'],
+        sampleRows: [{ Date: '2025-01-15', Payee: 'Test Store', Amount: '50.00' }],
+        totalRowCount: 1,
+        detectedDelimiter: 'Comma',
+        detectedEncoding: 'UTF-8',
+        errors: [],
+        requiresManualMapping: false,
+        availableHeaders: ['Date', 'Payee', 'Amount'],
+        duplicates: [],
+        suggestions: []
+      });
+      component.showConfirmationPreview.set(true);
+
+      // Spy on snackbar to verify error handling
+      const snackBarSpy = jest.spyOn(component['snackBar'], 'open');
+
+      component.confirmImport();
+
+      const req = httpMock.expectOne('http://localhost:5000/api/import/confirm');
+      req.flush(
+        { message: 'Import validation failed: 3 transactions missing categories' },
+        { status: 400, statusText: 'Bad Request' }
+      );
+
+      setTimeout(() => {
+        // Verify error snackbar was called with error message and "Retry" action
+        expect(snackBarSpy).toHaveBeenCalledWith(
+          'Import validation failed: 3 transactions missing categories',
+          'Retry',
+          expect.objectContaining({
+            duration: 10000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+            panelClass: ['error-snackbar']
+          })
+        );
+
+        // Verify component state is not reset (preview remains for retry)
+        expect(component.previewData()).not.toBeNull();
+        expect(component.showConfirmationPreview()).toBe(true);
         done();
       }, 100);
     });

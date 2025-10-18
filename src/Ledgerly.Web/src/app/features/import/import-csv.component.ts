@@ -403,8 +403,9 @@ export class ImportCsvComponent {
   checkForDuplicates(): void {
     const preview = this.previewData();
     if (!preview || !preview.duplicates || preview.duplicates.length === 0) {
-      // No duplicates, proceed to category suggestions
+      // No duplicates, proceed to category suggestions then show confirmation
       this.loadCategorySuggestions();
+      this.finalizeImport();
       return;
     }
 
@@ -605,7 +606,7 @@ export class ImportCsvComponent {
         if (response.success) {
           // Show success snackbar with navigation
           const snackBarRef = this.snackBar.open(
-            `Imported ${response.transactionsImported} transactions successfully`,
+            `Imported ${response.transactionsImported} transactions`,
             'View Dashboard',
             {
               duration: 10000,

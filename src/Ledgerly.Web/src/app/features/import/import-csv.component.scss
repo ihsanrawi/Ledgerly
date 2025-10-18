@@ -467,6 +467,13 @@ td.no-suggestion {
     font-size: 24px;
     font-weight: 500;
   }
+
+  h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: #212121;
+  }
 }
 
 .confirmation-summary {
@@ -526,23 +533,43 @@ td.no-suggestion {
   }
 }
 
+.learning-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  background-color: #e3f2fd;
+  border-left: 4px solid #1976d2;
+  border-radius: 4px;
+
+  mat-icon {
+    color: #1976d2;
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+
+  span {
+    flex: 1;
+    color: #0d47a1;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}
+
 .confirmation-table-container {
   margin-bottom: 24px;
-
-  h3 {
-    margin: 0 0 16px 0;
-    font-size: 18px;
-    font-weight: 500;
-    color: #212121;
-  }
+  max-height: 500px;
+  overflow: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
 }
 
 .confirmation-table {
   width: 100%;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
-  overflow: auto;
-  max-height: 500px;
 
   .mat-mdc-header-cell {
     background-color: #3f51b5;
@@ -559,6 +586,7 @@ td.no-suggestion {
     padding: 12px 16px;
     border-bottom: 1px solid #e0e0e0;
     vertical-align: middle;
+    position: relative;
 
     &.duplicate-row {
       background-color: #fafafa;

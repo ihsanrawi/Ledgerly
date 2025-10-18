@@ -81,7 +81,7 @@
     </div>
 
     <!-- Preview Section -->
-    <div *ngIf="previewData() && !showManualMapping()" class="preview-section">
+    <div *ngIf="previewData() && !showManualMapping() && !showConfirmationPreview()" class="preview-section">
       <!-- Format Detection Info -->
       <div class="format-info">
         <h3>Detected Format</h3>
@@ -138,7 +138,7 @@
         <mat-icon>info</mat-icon>
         <div class="summary-text">
           <strong>Import Summary:</strong>
-          Importing {{ importSummary()!.importing }} transactions
+          {{ importSummary()!.readyToImport }} transactions ready to import
           <span *ngIf="importSummary()!.skipped > 0">
             ({{ importSummary()!.skipped }} duplicates skipped)
           </span>
@@ -248,7 +248,7 @@
           [disabled]="!canProceedToNextStep()"
           *ngIf="canProceedToNextStep() && !requiresManualMapping() && !hasDuplicates()">
           <mat-icon>arrow_forward</mat-icon>
-          Next: Review & Import
+          Review Import
         </button>
         <button
           mat-raised-button
@@ -299,9 +299,15 @@
         </div>
       </div>
 
+      <!-- Learning Indicator -->
+      <div class="learning-indicator">
+        <mat-icon>lightbulb</mat-icon>
+        <span>Ledgerly learns from your corrections to improve future imports</span>
+      </div>
+
       <!-- Editable Preview Table -->
+      <h3>Review and Edit Transactions</h3>
       <div class="confirmation-table-container">
-        <h3>Review and Edit Transactions</h3>
         <table mat-table [dataSource]="previewData()!.sampleRows" class="confirmation-table">
 
           <!-- Date Column -->
