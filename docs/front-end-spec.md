@@ -19,6 +19,66 @@ Ledgerly is a **local-first, dashboard-driven personal finance manager** that br
 |------|---------|-------------|--------|
 | 2025-10-03 | 1.0 | Initial UI/UX Specification | Sally (UX Expert) |
 | 2025-10-03 | 1.1 | Architecture alignment: hledger + .hledger files | John (PM) |
+| 2025-10-18 | 1.2 | Added Design System reference and implementation section | Winston (Architect) |
+| 2025-10-18 | 1.3 | Clarified React samples are reference only - Angular is production framework | Winston (Architect) |
+
+---
+
+## Design System Implementation
+
+**MANDATORY:** All frontend development MUST follow the **[Ledgerly Design System](architecture/design-system.md)**.
+
+### ⚠️ Design Samples vs. Implementation
+
+**Design Samples (Reference Only):**
+The design samples in [docs/design-samples/](../design-samples/) are written in **React/TypeScript with Tailwind CSS** for rapid prototyping and visual reference. These are **NOT** the implementation framework.
+
+**Actual Implementation (Production):**
+- **Framework:** Angular 17.3.8 with TypeScript
+- **Styling:** SCSS + CSS Custom Properties
+- **Components:** Angular Material
+- **Icons:** Material Icons
+- **Charts:** Chart.js / ng2-charts
+
+**How to Use Design Samples:**
+1. Extract **design principles**: Colors, spacing, typography, layouts
+2. **Translate to Angular**: Use Angular Material components (see translation guide in design system)
+3. Apply **visual patterns**: Grid layouts, responsive breakpoints, component structure
+4. **Ignore React-specific code**: JSX syntax, Tailwind classes, React hooks are reference only
+
+### Design Authority
+
+The design system establishes the visual language for the entire application based on the design samples, but **ALL implementation must be in Angular**.
+
+**Key Design System Elements:**
+- **Design Tokens** - CSS custom properties for colors (HSL-based for light/dark mode)
+- **Component Patterns** - Cards, tables, badges, navigation, transaction lists, charts
+- **Angular Material** - Use Material components translated from React examples
+- **Responsive Design** - CSS Grid/Flexbox with mobile-first breakpoints
+- **Accessibility** - WCAG AA compliance, keyboard navigation
+
+### Quick Reference
+
+**Colors (CSS Custom Properties):**
+```scss
+--primary-color: hsl(210, 29%, 24%);     /* Deep blue - professional */
+--accent-color: hsl(168, 76%, 42%);      /* Teal - positive actions */
+--success-color: hsl(145, 63%, 42%);     /* Green - success states */
+--destructive-color: hsl(0, 65%, 51%);   /* Red - warnings, overdrafts */
+--text-secondary: hsl(215, 14%, 34%);    /* Supporting text */
+```
+
+**Typography (SCSS):**
+- **Page Title:** `font-size: 1.875rem; font-weight: 700;` (30px, bold)
+- **Card Title:** `font-size: 1.5rem; font-weight: 600;` (24px, semibold)
+- **Body:** `font-size: 1rem; font-weight: 400;` (16px, normal)
+- **Amounts:** `font-family: 'Courier New', monospace; font-size: 1.125rem; font-weight: 600;`
+
+**Spacing (SCSS):** Use `1.5rem` (24px) for section gaps, `1rem` (16px) for component gaps
+
+**Components:** Use Angular Material: `mat-card`, `mat-button`, `mat-chip`, `mat-dialog`, etc.
+
+**See [Design System](architecture/design-system.md) for complete implementation guide and React-to-Angular translation table.**
 
 ---
 
