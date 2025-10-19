@@ -170,7 +170,28 @@
 
 **Epic Goal:** Build the dashboard-first UI with net worth summary, expense breakdowns, income vs. expense charts, and drill-down navigation.
 
-### Story 3.1: Create Dashboard Layout and Net Worth Widget
+**Note:** Story 3.1 addresses critical UI/UX technical debt from Epic 1-2 before proceeding with new dashboard development.
+
+### Story 3.1: UI/UX Refinement - Align Epics 1-2 with Design System
+
+**As a** user,
+**I want** Epic 1-2 UI components to follow the ai-frontend-prompt.md design specifications,
+**so that** the application has a consistent, accessible, mobile-first user experience.
+
+**Acceptance Criteria:**
+1. Balance Display component (Story 1.5) refined for mobile-first, accessibility, design system
+2. CSV Import components (Stories 2.2-2.6) refined per ai-frontend-prompt.md specifications
+3. All components meet WCAG AA accessibility standards
+4. Responsive design validated at all breakpoints (320px-1920px)
+5. Dark mode styling validated across all components
+
+**Rationale:** Addresses critical deviations identified after Epic 1-2 completion. Completing this FIRST ensures consistent design patterns before building new dashboard features.
+
+**See:** [docs/stories/3.1.ui-ux-refinement-epics-1-2.md](../stories/3.1.ui-ux-refinement-epics-1-2.md) for detailed tasks and subtasks.
+
+---
+
+### Story 3.2: Create Dashboard Layout and Net Worth Widget
 
 **As a** user,
 **I want** to see my net worth (assets - liabilities) when I open the app,
@@ -184,7 +205,7 @@
 5. Loading spinner shown while data fetches
 6. Responsive layout: Full-width on mobile, card grid on desktop
 
-### Story 3.2: Build Expense Breakdown Chart
+### Story 3.3: Build Expense Breakdown Chart
 
 **As a** user,
 **I want** to see a visual breakdown of my expenses by category,
@@ -194,11 +215,11 @@
 1. Pie or donut chart displays top 5-7 expense categories for current month
 2. Chart.js library integrated for interactive visualizations
 3. Hover tooltip shows: Category name, amount, percentage of total
-4. Click on chart segment triggers drill-down to category detail (Story 3.5)
+4. Click on chart segment triggers drill-down to category detail (Story 3.6)
 5. "Other" category aggregates remaining categories beyond top 7
 6. Data fetched from `/api/dashboard/expenses?period=month` endpoint
 
-### Story 3.3: Build Income vs. Expense Comparison
+### Story 3.4: Build Income vs. Expense Comparison
 
 **As a** user,
 **I want** to compare my income and expenses over time,
@@ -212,7 +233,7 @@
 5. Negative net income months highlighted with warning indicator
 6. Data fetched from `/api/dashboard/income-expense?period=6months` endpoint
 
-### Story 3.4: Add Recent Transactions and Quick Actions
+### Story 3.5: Add Recent Transactions and Quick Actions
 
 **As a** user,
 **I want** to see my recent transactions and quick action buttons on the dashboard,
@@ -226,7 +247,7 @@
 5. Buttons route to: CSV import flow, add transaction modal, transactions list page
 6. Empty state message if no transactions: "Import your first CSV to get started"
 
-### Story 3.5: Implement Drill-Down Navigation
+### Story 3.6: Implement Drill-Down Navigation
 
 **As a** user,
 **I want** to click on a category in the dashboard and see all transactions for that category,
@@ -240,7 +261,7 @@
 5. "Back to Dashboard" button returns to dashboard view
 6. Click on category in recent transactions list also triggers drill-down
 
-### Story 3.6: Performance Test Dashboard with 5,000 Transactions
+### Story 3.7: Performance Test Dashboard with 5,000 Transactions
 
 **As a** developer,
 **I want** to validate dashboard loads in <2 seconds with 5,000 transactions,
