@@ -1,6 +1,12 @@
+// Mobile-first responsive layout using design system tokens
 mat-card {
-  margin: 16px;
-  max-width: 800px;
+  margin: 1rem; // Design system: 1rem component gaps
+  max-width: 100%; // Mobile-first: Full width on mobile
+
+  // Tablet and up
+  @media (min-width: 768px) {
+    max-width: 800px;
+  }
 }
 
 .loading-container {
@@ -8,12 +14,12 @@ mat-card {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 2.5rem; // Design system: generous whitespace
   text-align: center;
 
   p {
-    margin-top: 16px;
-    color: rgba(0, 0, 0, 0.6);
+    margin-top: 1rem;
+    color: var(--text-secondary, rgba(0, 0, 0, 0.6)); // Design system: CSS custom properties
   }
 }
 
@@ -21,17 +27,17 @@ mat-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 40px;
+  padding: 2.5rem;
 
   .error {
-    color: #f44336;
-    margin-bottom: 16px;
+    color: var(--destructive-color, #f44336); // Design system: semantic colors
+    margin-bottom: 1rem;
     font-weight: 500;
   }
 }
 
 .balance-tree-container {
-  padding: 8px 0;
+  padding: 0.5rem 0;
 }
 
 .balance-tree {
@@ -42,7 +48,7 @@ mat-card {
   }
 
   ul {
-    padding-left: 24px;
+    padding-left: 1.5rem; // Design system: consistent spacing
   }
 
   .tree-invisible {
@@ -52,48 +58,107 @@ mat-card {
   .account-row {
     display: flex;
     align-items: center;
-    padding: 8px 4px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    transition: background-color 0.2s;
+    padding: 0.75rem 0.5rem; // Design system: 0.5rem increments
+    border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+    transition: background-color 0.2s ease-in-out;
 
+    // Hover state - design system
     &:hover {
-      background-color: rgba(0, 0, 0, 0.04);
+      background-color: var(--hover-bg, rgba(0, 0, 0, 0.04));
+    }
+
+    // Focus state - WCAG AA compliance (2px teal outline)
+    &:focus-within {
+      outline: 2px solid var(--accent-color, #1ABC9C);
+      outline-offset: 2px;
     }
 
     button {
-      margin-right: 4px;
+      margin-right: 0.5rem;
+
+      // Focus indicator for icon button
+      &:focus {
+        outline: 2px solid var(--accent-color, #1ABC9C);
+        outline-offset: 2px;
+      }
     }
 
     .account-name {
       flex: 1;
-      font-size: 14px;
+      font-size: 0.875rem; // Design system: 14px small text
       font-weight: 500;
-      color: rgba(0, 0, 0, 0.87);
+      color: var(--text-primary, rgba(0, 0, 0, 0.87));
+
+      // Mobile: Slightly smaller
+      @media (max-width: 767px) {
+        font-size: 0.8125rem; // 13px
+      }
     }
 
     .account-balance {
-      font-family: 'Roboto Mono', monospace;
-      font-size: 14px;
+      // Design system: Monospace for financial data
+      font-family: var(--font-mono, 'Courier New', 'Consolas', monospace);
+      font-size: 1rem; // Design system: 16px body text
       font-weight: 600;
-      color: #2e7d32;
+      color: var(--success-color, #2e7d32); // Design system: success green for positive amounts
       min-width: 120px;
       text-align: right;
 
       &.negative {
-        color: #c62828;
+        color: var(--destructive-color, #c62828); // Design system: destructive red for negative amounts
+      }
+
+      // Mobile: Smaller amounts
+      @media (max-width: 767px) {
+        font-size: 0.875rem; // 14px
+        min-width: 100px;
       }
     }
   }
 }
 
 mat-card-actions {
-  padding: 16px;
+  padding: 1rem; // Design system spacing
   display: flex;
   justify-content: flex-end;
 
   button {
+    // Focus indicator - WCAG AA
+    &:focus {
+      outline: 2px solid var(--accent-color, #1ABC9C);
+      outline-offset: 2px;
+    }
+
     mat-icon {
-      margin-right: 8px;
+      margin-right: 0.5rem;
+    }
+  }
+
+  // Mobile: Full width button
+  @media (max-width: 767px) {
+    justify-content: stretch;
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  .loading-container p {
+    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  }
+
+  .balance-tree .account-row {
+    border-bottom-color: var(--border-color, rgba(255, 255, 255, 0.12));
+
+    &:hover {
+      background-color: var(--hover-bg, rgba(255, 255, 255, 0.08));
+    }
+
+    .account-name {
+      color: var(--text-primary, rgba(255, 255, 255, 0.87));
     }
   }
 }

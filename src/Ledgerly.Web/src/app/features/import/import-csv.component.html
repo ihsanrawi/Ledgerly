@@ -1,4 +1,4 @@
-<mat-card>
+<mat-card role="region" aria-label="CSV File Import">
   <mat-card-header>
     <mat-card-title>Import CSV File</mat-card-title>
   </mat-card-header>
@@ -6,15 +6,20 @@
   <mat-card-content>
     <!-- File Upload Section -->
     <div *ngIf="!previewData()" class="upload-section">
-      <!-- Drag & Drop Zone -->
+      <!-- Drag & Drop Zone - ai-frontend-prompt.md Section 3, Step 1 -->
       <div
         class="drag-drop-zone"
+        role="button"
+        tabindex="0"
         [class.drag-over]="dragOver()"
+        [attr.aria-label]="dragOver() ? 'Drop file to upload' : 'Drag and drop CSV file here or click to browse'"
         (dragover)="onDragOver($event)"
         (dragleave)="onDragLeave($event)"
-        (drop)="onDrop($event)">
+        (drop)="onDrop($event)"
+        (keydown.enter)="fileInput.click()"
+        (keydown.space)="fileInput.click()">
 
-        <mat-icon class="upload-icon">cloud_upload</mat-icon>
+        <mat-icon class="upload-icon" aria-hidden="true">cloud_upload</mat-icon>
         <p class="upload-text">Drag & drop your CSV file here</p>
         <p class="upload-subtext">or</p>
 
@@ -23,31 +28,33 @@
           type="file"
           accept=".csv"
           (change)="onFilePickerChange($event)"
-          style="display: none;">
+          style="display: none;"
+          aria-label="Choose CSV file">
 
         <button
           mat-raised-button
           color="primary"
-          (click)="fileInput.click()">
+          (click)="fileInput.click()"
+          aria-label="Browse for CSV files">
           Browse Files
         </button>
       </div>
 
       <!-- Selected File Info -->
-      <div *ngIf="selectedFile()" class="selected-file-info">
-        <mat-icon>description</mat-icon>
+      <div *ngIf="selectedFile()" class="selected-file-info" role="status" aria-live="polite">
+        <mat-icon aria-label="File selected" role="img">description</mat-icon>
         <div class="file-details">
           <span class="file-name">{{ selectedFile()!.name }}</span>
-          <span class="file-size">{{ formatFileSize(selectedFile()!.size) }}</span>
+          <span class="file-size" aria-label="File size">{{ formatFileSize(selectedFile()!.size) }}</span>
         </div>
-        <button mat-icon-button (click)="removeFile()" color="warn">
+        <button mat-icon-button (click)="removeFile()" color="warn" aria-label="Remove selected file">
           <mat-icon>close</mat-icon>
         </button>
       </div>
 
       <!-- Error Message -->
-      <div *ngIf="errorMessage()" class="error-message">
-        <mat-icon>error</mat-icon>
+      <div *ngIf="errorMessage()" class="error-message" role="alert" aria-live="assertive">
+        <mat-icon aria-hidden="true">error</mat-icon>
         <span>{{ errorMessage() }}</span>
       </div>
 
@@ -57,9 +64,10 @@
           mat-raised-button
           color="primary"
           (click)="uploadAndPreview()"
-          [disabled]="uploading()">
-          <mat-icon *ngIf="!uploading()">upload</mat-icon>
-          <mat-spinner *ngIf="uploading()" diameter="20"></mat-spinner>
+          [disabled]="uploading()"
+          [attr.aria-label]="uploading() ? 'Uploading file, please wait' : 'Upload and preview CSV file'">
+          <mat-icon *ngIf="!uploading()" aria-hidden="true">upload</mat-icon>
+          <mat-spinner *ngIf="uploading()" diameter="20" aria-label="Uploading"></mat-spinner>
           {{ uploading() ? 'Uploading...' : 'Upload & Preview' }}
         </button>
       </div>
