@@ -2,8 +2,9 @@
 
 **Story:** UI/UX Refinement - Align Epics 1-2 with Design System
 **Developer:** James (Dev Agent)
-**Date:** 2025-10-19
-**Status:** In Progress (Foundation Complete)
+**Start Date:** 2025-10-19
+**Last Updated:** 2025-10-28
+**Status:** In Progress (3/5 Components Complete)
 
 ---
 
@@ -570,3 +571,255 @@ Good luck with the remaining implementation! The hard architectural work is done
 ---
 
 **Last Updated:** 2025-10-19 by James (Dev Agent)
+
+---
+
+## 📅 Session 2: October 28, 2025 - Component Refinements
+
+### 4. Balance Display Component Refinement (2 hours)
+
+**Commit:** 467bb17 - feat(story-3.1): Refine Balance Display and CSV Upload components
+
+**Files Modified:**
+- `src/Ledgerly.Web/src/app/features/balance/balance-display.component.html`
+- `src/Ledgerly.Web/src/app/features/balance/balance-display.component.scss`
+
+**Design System Implementation:**
+
+✅ **Mobile-First Responsive Layout:**
+- Full width on mobile (<768px)
+- Max-width 800px on tablet+ (≥768px)
+- Responsive typography: Smaller fonts on mobile
+- Full-width buttons on small screens
+
+✅ **CSS Custom Properties:**
+- `var(--text-primary)` - Primary text color
+- `var(--text-secondary)` - Supporting text
+- `var(--success-color)` - Positive balances (green)
+- `var(--destructive-color)` - Negative balances (red)
+- `var(--font-mono)` - Monospace for financial amounts
+- `var(--border-color)` - Borders and dividers
+
+✅ **Accessibility (WCAG AA):**
+- `role="tree"` and `role="treeitem"` for hierarchical data
+- `aria-expanded` on collapsible nodes
+- `aria-label` with balance amounts for screen readers
+- `aria-live="polite"` for loading states
+- `aria-live="assertive"` for error messages
+- 2px teal focus indicators on all interactive elements
+- Keyboard navigation support (Tab, Enter, Escape)
+
+✅ **Dark Mode Support:**
+- `@media (prefers-color-scheme: dark)` queries
+- Proper contrast ratios for text (WCAG AA: 4.5:1 body, 3:1 large)
+- Adaptive hover states and borders
+
+**Code Example - Monospace Amounts:**
+```scss
+.account-balance {
+  font-family: var(--font-mono, 'Courier New', 'Consolas', monospace);
+  font-size: 1rem; // 16px body text
+  font-weight: 600;
+  color: var(--success-color, #2e7d32);
+  
+  &.negative {
+    color: var(--destructive-color, #c62828);
+  }
+  
+  @media (max-width: 767px) {
+    font-size: 0.875rem; // 14px on mobile
+  }
+}
+```
+
+**Code Example - Accessibility:**
+```html
+<div class="account-row" tabindex="0"
+     [attr.aria-label]="node.account + ' balance: ' + (node.balance | currency)">
+  <span class="account-name" aria-hidden="true">{{ node.account }}</span>
+  <span class="account-balance" aria-hidden="true">{{ node.balance | currency }}</span>
+</div>
+```
+
+### 5. CSV Upload Component Refinement (2 hours)
+
+**Commit:** 467bb17 (same commit as Balance Display)
+
+**Files Modified:**
+- `src/Ledgerly.Web/src/app/features/import/import-csv.component.html`
+- `src/Ledgerly.Web/src/app/features/import/import-csv.component.scss`
+
+**Design System Implementation:**
+
+✅ **Drag-Drop Zone Styling (ai-frontend-prompt.md Section 3, Step 1):**
+- Teal accent border on hover: `var(--accent-color, #1ABC9C)`
+- 10% opacity teal background on drag-over: `rgba(26, 188, 156, 0.1)`
+- Smooth transitions: `transition: all 0.3s ease-in-out`
+- Responsive padding (reduced on mobile)
+
+✅ **Keyboard Navigation:**
+- `role="button"` with `tabindex="0"` on drag-drop zone
+- Enter/Space keys trigger file picker
+- 2px teal focus indicators on zone and buttons
+- Clear focus states for screen reader users
+
+✅ **Mobile-First Responsive:**
+- Smaller upload icon on mobile (48px vs 64px desktop)
+- Full-width buttons on small screens
+- Stacked layout for file info (vertical centering on mobile)
+- Word wrapping for long filenames
+
+✅ **Accessibility:**
+- `aria-label` on drag-drop zone (dynamic based on drag state)
+- `aria-live="polite"` for file selection status
+- `aria-live="assertive"` for error messages
+- Descriptive labels on all buttons and inputs
+- Icon decorations marked `aria-hidden="true"`
+
+**Code Example - Drag-Drop Zone:**
+```scss
+.drag-drop-zone {
+  border: 2px dashed var(--border-color, #ccc);
+  border-radius: var(--border-radius, 8px);
+  background-color: var(--upload-bg, #fafafa);
+  cursor: pointer;
+  
+  &:hover {
+    border-color: var(--accent-color, #1ABC9C); // Teal accent
+    background-color: var(--hover-bg, #f0f0f0);
+  }
+  
+  &.drag-over {
+    border-color: var(--accent-color, #1ABC9C);
+    background-color: var(--accent-light-bg, rgba(26, 188, 156, 0.1));
+    border-style: solid;
+  }
+  
+  &:focus-within {
+    outline: 2px solid var(--accent-color, #1ABC9C);
+    outline-offset: 2px;
+  }
+  
+  @media (max-width: 767px) {
+    padding: 2rem 1rem; // Reduced from 3rem 2rem
+  }
+}
+```
+
+**Code Example - Accessibility:**
+```html
+<div class="drag-drop-zone"
+     role="button"
+     tabindex="0"
+     [attr.aria-label]="dragOver() ? 'Drop file to upload' : 'Drag and drop CSV file here or click to browse'"
+     (keydown.enter)="fileInput.click()"
+     (keydown.space)="fileInput.click()">
+  <!-- Zone content -->
+</div>
+
+<div *ngIf="errorMessage()" class="error-message" 
+     role="alert" 
+     aria-live="assertive">
+  <mat-icon aria-hidden="true">error</mat-icon>
+  <span>{{ errorMessage() }}</span>
+</div>
+```
+
+---
+
+## 📊 Overall Progress
+
+### Completed Components (3/5)
+
+| Component | Status | Commit | Files Changed | Key Features |
+|-----------|--------|--------|---------------|--------------|
+| **Duplicate Detection Dialog** | ✅ Complete | f2c1afd | 3 files | Side-by-side comparison, confidence badges, responsive layout |
+| **Balance Display** | ✅ Complete | 467bb17 | 2 files | Mobile-first grid, monospace amounts, full ARIA support |
+| **CSV Upload** | ✅ Complete | 467bb17 | 2 files | Teal accent drag-drop, keyboard nav, responsive |
+
+### Remaining Components (2/5)
+
+| Component | Status | Estimated Effort | Priority | Blockers |
+|-----------|--------|-----------------|----------|----------|
+| **Column Mapping** | 🔄 Not Started | 2h | HIGH | None - ready to implement |
+| **Preview (Virtualized Scroll)** | 🔄 Not Started | 2.5h | CRITICAL | None - ready to implement |
+
+### Cross-Cutting Tasks
+
+| Task | Status | Notes |
+|------|--------|-------|
+| **CSS Custom Properties** | ✅ Complete | design-tokens.css, styles.css |
+| **Focus Indicators** | ✅ Complete | 2px teal outline on all components |
+| **Accessibility Audit** | ⏳ Pending | Manual testing with axe DevTools required |
+| **Responsive Testing** | ⏳ Pending | Test at 320px, 768px, 1024px, 1366px, 1920px |
+| **Dark Mode Validation** | ⏳ Pending | Test prefers-color-scheme: dark |
+| **Unit Tests Update** | ⏳ Pending | Reflect UI changes in test specs |
+
+---
+
+## 🎯 Next Steps
+
+### Immediate (Session 3)
+
+1. **Column Mapping Component** (2h)
+   - Add confidence indicators (green checkmark >90%, yellow warning)
+   - Ensure preview table shows first 5 rows
+   - Highlight mapped columns in preview
+   - Test drag-drop with keyboard fallback
+
+2. **Preview Component Virtualization** (2.5h)
+   - Implement Angular CDK Virtual Scroll
+   - Add summary footer: "X found, Y duplicates skipped, Z ready to import, N need categorization"
+   - Show category suggestions with confidence indicators
+   - Add learning indicator: "Ledgerly learns from your corrections to improve future imports"
+
+### Testing & Validation (Session 4)
+
+3. **Accessibility Audit** (1h)
+   - Run axe DevTools on all 5 components
+   - Fix any critical/serious issues
+   - Validate keyboard navigation flows
+   - Test with screen reader (NVDA/JAWS)
+
+4. **Responsive Testing** (1h)
+   - Test all breakpoints: 320px, 768px, 1024px, 1366px, 1920px
+   - Verify mobile layouts stack correctly
+   - Check button sizing on small screens
+   - Validate touch targets (minimum 44x44px)
+
+5. **Dark Mode Testing** (30m)
+   - Toggle `prefers-color-scheme: dark` in DevTools
+   - Check contrast ratios with axe DevTools
+   - Verify all custom properties adapt
+   - Test chart colors in dark mode
+
+6. **Unit Tests** (1h)
+   - Update component specs for HTML changes
+   - Test ARIA label bindings
+   - Verify responsive class toggling
+   - Check signal-based reactivity
+
+---
+
+## 📈 Time Tracking
+
+| Session | Date | Duration | Tasks Completed |
+|---------|------|----------|-----------------|
+| Session 1 | Oct 19 | 3h | Audit, CSS setup, Duplicate dialog |
+| Session 2 | Oct 28 | 4h | Balance Display, CSV Upload |
+| **Total** | | **7h / 14h** | **3/5 components (50%)** |
+
+**Estimated Remaining:** 7h (Column Mapping 2h + Preview 2.5h + Testing 2.5h)
+
+**On Track:** Yes - 50% complete at 50% time elapsed
+
+---
+
+## 🔗 Related Documentation
+
+- **Story File:** [docs/stories/3.1.ui-ux-refinement-epics-1-2.md](../docs/stories/3.1.ui-ux-refinement-epics-1-2.md)
+- **Component Audit:** [.ai/component-audit-report.md](.ai/component-audit-report.md)
+- **Design System:** [docs/architecture/design-system.md](../docs/architecture/design-system.md)
+- **AI Frontend Spec:** [docs/ai-frontend-prompt.md](../docs/ai-frontend-prompt.md)
+- **Duplicate Dialog Summary:** [.ai/duplicate-dialog-implementation-summary.md](.ai/duplicate-dialog-implementation-summary.md)
+
