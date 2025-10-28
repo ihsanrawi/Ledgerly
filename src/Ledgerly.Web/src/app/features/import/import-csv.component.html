@@ -141,98 +141,107 @@
         </button>
       </div>
 
-      <!-- Import Summary (after duplicate detection) -->
-      <div *ngIf="importSummary()" class="import-summary">
-        <mat-icon>info</mat-icon>
+      <!-- Import Summary (after duplicate detection) - ai-frontend-prompt.md format -->
+      <div *ngIf="importSummary()" class="import-summary" role="status" aria-live="polite">
+        <mat-icon aria-hidden="true">summarize</mat-icon>
         <div class="summary-text">
-          <strong>Import Summary:</strong>
-          {{ importSummary()!.readyToImport }} transactions ready to import
-          <span *ngIf="importSummary()!.skipped > 0">
-            ({{ importSummary()!.skipped }} duplicates skipped)
-          </span>
-          <span *ngIf="importSummary()!.withSuggestions > 0">
-            ({{ importSummary()!.withSuggestions }} with category suggestions)
-          </span>
+          <strong>
+            {{ importSummary()!.total }} found,
+            {{ importSummary()!.skipped }} duplicates skipped,
+            {{ importSummary()!.readyToImport }} ready to import<span *ngIf="importSummary()!.needsCategorization > 0">,
+            {{ importSummary()!.needsCategorization }} need categorization</span>
+          </strong>
         </div>
       </div>
 
-      <!-- Preview Table -->
+      <!-- Preview Table with Virtualized Scrolling -->
       <div class="preview-table-container">
-        <h3>Preview (First 10 Rows)</h3>
-        <table mat-table [dataSource]="previewData()!.sampleRows" class="preview-table">
+        <h3>Preview Data ({{ previewData()!.sampleRows.length }} Rows)</h3>
 
-          <!-- Dynamic Columns -->
-          <ng-container *ngFor="let column of getDisplayedColumns()" [matColumnDef]="column">
-            <th mat-header-cell *matHeaderCellDef class="sticky-header column-header">
-              <div class="header-content">
-                <span class="header-text">{{ column }}</span>
-                <div class="header-indicators" *ngIf="getDetectedFieldType(column)">
-                  <mat-chip-set aria-label="Field type">
-                    <mat-chip class="field-type-chip">
-                      {{ getFieldTypeLabel(getDetectedFieldType(column)) }}
-                    </mat-chip>
-                  </mat-chip-set>
-                  <mat-icon
-                    class="confidence-icon"
-                    [class.confidence-high]="getConfidenceColor(getDetectedFieldType(column)) === 'success'"
-                    [class.confidence-medium]="getConfidenceColor(getDetectedFieldType(column)) === 'warn'"
-                    [class.confidence-low]="getConfidenceColor(getDetectedFieldType(column)) === 'error'"
-                    [matTooltip]="getConfidenceTooltip(column)"
-                    matTooltipPosition="above">
-                    {{ getConfidenceIcon(getDetectedFieldType(column)) }}
+        <!-- Learning Indicator -->
+        <div class="learning-indicator" role="status" aria-live="polite">
+          <mat-icon class="learning-icon" aria-hidden="true">psychology</mat-icon>
+          <span><strong>Ledgerly learns from your corrections</strong> to improve future imports</span>
+        </div>
+
+        <cdk-virtual-scroll-viewport itemSize="50" class="preview-scroll-viewport">
+          <table mat-table [dataSource]="previewData()!.sampleRows" class="preview-table">
+
+            <!-- Dynamic Columns -->
+            <ng-container *ngFor="let column of getDisplayedColumns()" [matColumnDef]="column">
+              <th mat-header-cell *matHeaderCellDef class="sticky-header column-header">
+                <div class="header-content">
+                  <span class="header-text">{{ column }}</span>
+                  <div class="header-indicators" *ngIf="getDetectedFieldType(column)">
+                    <mat-chip-set aria-label="Field type">
+                      <mat-chip class="field-type-chip">
+                        {{ getFieldTypeLabel(getDetectedFieldType(column)) }}
+                      </mat-chip>
+                    </mat-chip-set>
+                    <mat-icon
+                      class="confidence-icon"
+                      [class.confidence-high]="getConfidenceColor(getDetectedFieldType(column)) === 'success'"
+                      [class.confidence-medium]="getConfidenceColor(getDetectedFieldType(column)) === 'warn'"
+                      [class.confidence-low]="getConfidenceColor(getDetectedFieldType(column)) === 'error'"
+                      [matTooltip]="getConfidenceTooltip(column)"
+                      matTooltipPosition="above">
+                      {{ getConfidenceIcon(getDetectedFieldType(column)) }}
+                    </mat-icon>
+                  </div>
+                </div>
+              </th>
+              <td mat-cell *matCellDef="let row">{{ row[column] }}</td>
+            </ng-container>
+
+            <!-- Category Suggestions Column -->
+            <ng-container matColumnDef="category">
+              <th mat-header-cell *matHeaderCellDef class="sticky-header column-header">
+                <div class="header-content">
+                  <span class="header-text">Category</span>
+                  <mat-icon class="info-icon" matTooltip="Suggested categories based on payee patterns">
+                    info
                   </mat-icon>
                 </div>
-              </div>
-            </th>
-            <td mat-cell *matCellDef="let row">{{ row[column] }}</td>
-          </ng-container>
-
-          <!-- Category Suggestions Column -->
-          <ng-container matColumnDef="category">
-            <th mat-header-cell *matHeaderCellDef class="sticky-header column-header">
-              <div class="header-content">
-                <span class="header-text">Category</span>
-                <mat-icon class="info-icon" matTooltip="Suggested categories based on payee patterns">
-                  info
-                </mat-icon>
-              </div>
-            </th>
-            <td mat-cell *matCellDef="let row; let i = index"
-                [class.suggestion-highlight]="getSuggestionForTransaction(i)"
-                [class.no-suggestion]="!getSuggestionForTransaction(i)">
-              <div class="category-cell" *ngIf="getSuggestionForTransaction(i) as suggestion">
-                <mat-chip-set aria-label="Category suggestion">
-                  <mat-chip [class]="getSuggestionConfidenceClass(suggestion.confidence)">
-                    {{ suggestion.categoryName }}
-                    <span class="confidence-badge">{{ (suggestion.confidence * 100).toFixed(0) }}%</span>
-                  </mat-chip>
-                </mat-chip-set>
-                <div class="category-actions">
-                  <button mat-icon-button
-                          color="primary"
-                          (click)="acceptSuggestion(i, suggestion)"
-                          matTooltip="Accept suggestion">
-                    <mat-icon>check_circle</mat-icon>
-                  </button>
-                  <button mat-icon-button
-                          matTooltip="Override category">
-                    <mat-icon>edit</mat-icon>
-                  </button>
+              </th>
+              <td mat-cell *matCellDef="let row; let i = index"
+                  [class.suggestion-highlight]="getSuggestionForTransaction(i)"
+                  [class.no-suggestion]="!getSuggestionForTransaction(i)">
+                <div class="category-cell" *ngIf="getSuggestionForTransaction(i) as suggestion">
+                  <mat-chip-set aria-label="Category suggestion">
+                    <mat-chip [class]="getSuggestionConfidenceClass(suggestion.confidence)">
+                      {{ suggestion.categoryName }}
+                      <span class="confidence-badge">{{ (suggestion.confidence * 100).toFixed(0) }}%</span>
+                    </mat-chip>
+                  </mat-chip-set>
+                  <div class="category-actions">
+                    <button mat-icon-button
+                            color="primary"
+                            (click)="acceptSuggestion(i, suggestion)"
+                            matTooltip="Accept suggestion"
+                            aria-label="Accept category suggestion">
+                      <mat-icon>check_circle</mat-icon>
+                    </button>
+                    <button mat-icon-button
+                            matTooltip="Override category"
+                            aria-label="Override category suggestion">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div class="category-cell no-suggestion-text" *ngIf="!getSuggestionForTransaction(i)">
-                <mat-chip-set>
-                  <mat-chip class="no-suggestion-chip">
-                    No suggestion
-                  </mat-chip>
-                </mat-chip-set>
-              </div>
-            </td>
-          </ng-container>
+                <div class="category-cell no-suggestion-text" *ngIf="!getSuggestionForTransaction(i)">
+                  <mat-chip-set>
+                    <mat-chip class="no-suggestion-chip">
+                      No suggestion
+                    </mat-chip>
+                  </mat-chip-set>
+                </div>
+              </td>
+            </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="getDisplayedColumnsWithCategory(); sticky: true"></tr>
-          <tr mat-row *matRowDef="let row; columns: getDisplayedColumnsWithCategory();"></tr>
-        </table>
+            <tr mat-header-row *matHeaderRowDef="getDisplayedColumnsWithCategory(); sticky: true"></tr>
+            <tr mat-row *cdkVirtualFor="let row of previewData()!.sampleRows" *matRowDef="let row; columns: getDisplayedColumnsWithCategory();"></tr>
+          </table>
+        </cdk-virtual-scroll-viewport>
       </div>
 
       <!-- Actions -->

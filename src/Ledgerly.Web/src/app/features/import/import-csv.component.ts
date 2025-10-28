@@ -16,6 +16,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { HttpClient, HttpEventType } from '@angular/common/http';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ManualMappingComponent } from './manual-mapping.component';
 import { DuplicateWarningDialogComponent } from './duplicate-warning-dialog.component';
 import { ApiConfigService } from '../../core/services/api-config.service';
@@ -107,6 +108,7 @@ interface ConfirmImportResponse {
     MatInputModule,
     MatFormFieldModule,
     MatSnackBarModule,
+    ScrollingModule,
     ManualMappingComponent
   ],
   templateUrl: './import-csv.component.html',

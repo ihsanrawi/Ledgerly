@@ -61,10 +61,17 @@
           cdkDropList
           #dateZone="cdkDropList"
           [cdkDropListData]="['date']"
-          (cdkDropListDropped)="onDrop($event, 'date')">
+          (cdkDropListDropped)="onDrop($event, 'date')"
+          role="region"
+          [attr.aria-label]="'Date column drop zone' + (getMappedHeader('date') ? ', mapped to ' + getMappedHeader('date') : ', empty')">
           <div class="drop-zone-header">
             <mat-icon class="field-icon">calendar_today</mat-icon>
             <span class="field-label">Date Column</span>
+            @if (getConfidenceLevel('date') === 'high') {
+              <mat-icon class="confidence-icon high" matTooltip="High confidence ({{ formatConfidence('date') }})" aria-label="High confidence mapping">check_circle</mat-icon>
+            } @else if (getConfidenceLevel('date') === 'medium') {
+              <mat-icon class="confidence-icon medium" matTooltip="Medium confidence ({{ formatConfidence('date') }})" aria-label="Medium confidence mapping">warning</mat-icon>
+            }
             <span class="required-badge">Required</span>
           </div>
           @if (getMappedHeader('date'); as header) {
@@ -91,6 +98,11 @@
           <div class="drop-zone-header">
             <mat-icon class="field-icon">attach_money</mat-icon>
             <span class="field-label">Amount Column</span>
+            @if (getConfidenceLevel('amount') === 'high') {
+              <mat-icon class="confidence-icon high" matTooltip="High confidence ({{ formatConfidence('amount') }})" aria-label="High confidence mapping">check_circle</mat-icon>
+            } @else if (getConfidenceLevel('amount') === 'medium') {
+              <mat-icon class="confidence-icon medium" matTooltip="Medium confidence ({{ formatConfidence('amount') }})" aria-label="Medium confidence mapping">warning</mat-icon>
+            }
             <span class="required-badge">Required</span>
           </div>
           @if (getMappedHeader('amount'); as header) {
@@ -117,6 +129,11 @@
           <div class="drop-zone-header">
             <mat-icon class="field-icon">description</mat-icon>
             <span class="field-label">Description Column</span>
+            @if (getConfidenceLevel('description') === 'high') {
+              <mat-icon class="confidence-icon high" matTooltip="High confidence ({{ formatConfidence('description') }})" aria-label="High confidence mapping">check_circle</mat-icon>
+            } @else if (getConfidenceLevel('description') === 'medium') {
+              <mat-icon class="confidence-icon medium" matTooltip="Medium confidence ({{ formatConfidence('description') }})" aria-label="Medium confidence mapping">warning</mat-icon>
+            }
             <span class="required-badge">Required</span>
           </div>
           @if (getMappedHeader('description'); as header) {

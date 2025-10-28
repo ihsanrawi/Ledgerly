@@ -9,7 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ApiConfigService } from '../../core/services/api-config.service';
@@ -53,6 +53,7 @@ export class ManualMappingComponent {
   availableHeaders = input.required<string[]>();
   sampleRows = input.required<Record<string, string>[]>();
   savedMapping = input<Record<string, string> | null>(null);
+  mappingConfidences = input<Record<string, number>>({}); // fieldType -> confidence (0-1)
 
   // Outputs
   mappingComplete = output<Record<string, string>>();
@@ -215,7 +216,7 @@ export class ManualMappingComponent {
 
     this.http.post<SaveMappingResponse>(this.apiConfig.getApiUrl('/api/import/save-mapping'), command)
       .subscribe({
-        next: (response) => {
+        next: (_response) => {
           this.savingMapping.set(false);
           this.snackBar.open(`Mapping saved for ${this.bankIdentifier()}`, 'Close', {
             duration: 3000,
@@ -255,5 +256,30 @@ export class ManualMappingComponent {
   isRequiredField(fieldType: keyof ColumnMapping | null): boolean {
     if (!fieldType) return false;
     return ['date', 'amount', 'description'].includes(fieldType);
+  }
+
+  // Get confidence for a field type (if available from auto-detection)
+  getConfidence(fieldType: keyof ColumnMapping): number {
+    return this.mappingConfidences()[fieldType] || 0;
+  }
+
+  // Get confidence level category for UI display
+  getConfidenceLevel(fieldType: keyof ColumnMapping): 'high' | 'medium' | 'low' | 'none' {
+    const confidence = this.getConfidence(fieldType);
+    if (confidence >= 0.9) return 'high';
+    if (confidence >= 0.7) return 'medium';
+    if (confidence > 0) return 'low';
+    return 'none';
+  }
+
+  // Check if field has high confidence mapping
+  hasHighConfidence(fieldType: keyof ColumnMapping): boolean {
+    return this.getConfidence(fieldType) >= 0.9;
+  }
+
+  // Format confidence as percentage
+  formatConfidence(fieldType: keyof ColumnMapping): string {
+    const confidence = this.getConfidence(fieldType);
+    return confidence > 0 ? `${(confidence * 100).toFixed(0)}%` : '';
   }
 }

@@ -292,11 +292,57 @@
 }
 
 .preview-table-container {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--spacing-6, 1.5rem);
 
   h3 {
-    margin: 0 0 1rem 0;
-    color: #212121;
+    margin: 0 0 var(--spacing-4, 1rem) 0;
+    color: var(--text-primary, #212121);
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  // Learning indicator - ai-frontend-prompt.md Section 3, Step 4
+  .learning-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3, 0.75rem);
+    padding: var(--spacing-3, 0.75rem) var(--spacing-4, 1rem);
+    margin-bottom: var(--spacing-4, 1rem);
+    background-color: var(--accent-light-bg, rgba(26, 188, 156, 0.1));
+    border-left: 4px solid var(--accent-color, #1ABC9C);
+    border-radius: var(--radius-md, 6px);
+
+    .learning-icon {
+      color: var(--accent-color, #1ABC9C);
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+
+    span {
+      color: var(--text-primary, #212121);
+      font-size: 0.875rem;
+      line-height: 1.5;
+
+      strong {
+        font-weight: 600;
+      }
+    }
+
+    @media (max-width: 767px) {
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+    }
+  }
+
+  // Virtualized scroll viewport
+  .preview-scroll-viewport {
+    height: 400px;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: var(--radius-lg, 8px);
+    background-color: var(--card-background, white);
+    overflow: auto;
   }
 }
 
