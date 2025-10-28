@@ -39,11 +39,31 @@ public class DetectDuplicatesHandler
             })
             .ToList();
 
+        // Log computed hashes for debugging
+        foreach (var th in transactionHashes)
+        {
+            _logger.LogInformation(
+                "CSV Transaction: Date={Date}, Payee={Payee}, Amount={Amount}, ComputedHash={Hash}",
+                th.Transaction.Date, th.Transaction.Payee, th.Transaction.Amount, th.Hash);
+        }
+
         // Batch query for duplicates (performance optimization)
         var hashes = transactionHashes.Select(th => th.Hash).ToList();
         var existingTransactions = await _dbContext.Transactions
             .Where(t => hashes.Contains(t.Hash))
             .ToListAsync(ct);
+
+        _logger.LogInformation(
+            "Found {ExistingCount} existing transactions in database matching {HashCount} hashes",
+            existingTransactions.Count, hashes.Count);
+
+        // Log existing transaction hashes from database
+        foreach (var existing in existingTransactions)
+        {
+            _logger.LogInformation(
+                "DB Transaction: Date={Date}, Payee={Payee}, Amount={Amount}, Hash={Hash}",
+                existing.Date, existing.Payee, existing.Amount, existing.Hash);
+        }
 
         // Create lookup dictionary for O(1) access
         var existingByHash = existingTransactions

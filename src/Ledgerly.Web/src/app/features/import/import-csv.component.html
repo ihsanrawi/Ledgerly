@@ -241,6 +241,7 @@
           <mat-icon>rule</mat-icon>
           Override Auto-Detection
         </button>
+        <!-- No duplicates detected - proceed directly to review -->
         <button
           mat-raised-button
           color="primary"
@@ -250,6 +251,17 @@
           <mat-icon>arrow_forward</mat-icon>
           Review Import
         </button>
+        <!-- Duplicates detected but not reviewed yet - show review button -->
+        <button
+          mat-raised-button
+          color="warn"
+          (click)="checkForDuplicates()"
+          [disabled]="!canProceedToNextStep()"
+          *ngIf="canProceedToNextStep() && !requiresManualMapping() && hasDuplicates() && duplicateDecisions().size === 0">
+          <mat-icon>warning</mat-icon>
+          Review Duplicates
+        </button>
+        <!-- Duplicates reviewed - show finalize button -->
         <button
           mat-raised-button
           color="primary"

@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
 using Wolverine.Http;
 
 namespace Ledgerly.Api.Features.ImportCsv;
@@ -6,7 +5,7 @@ namespace Ledgerly.Api.Features.ImportCsv;
 /// <summary>
 /// Wolverine HTTP endpoint for confirming CSV import after preview.
 /// Story 2.6: Import Preview and Confirmation
-/// Requires authentication to ensure user can only import to their own .hledger file.
+/// TODO Phase 2: Add authentication to ensure user can only import to their own .hledger file.
 /// </summary>
 public class ConfirmImportEndpoint
 {
@@ -18,7 +17,7 @@ public class ConfirmImportEndpoint
     /// <param name="handler">Confirm import handler (injected)</param>
     /// <returns>Import confirmation response with success status and transaction IDs</returns>
     [WolverinePost("/api/import/confirm")]
-    [Authorize] // CRITICAL: Requires authenticated user
+    // TODO Phase 2: Add [Authorize] attribute when authentication is implemented
     public async Task<ConfirmImportResponse> Post(
         ConfirmImportCommand command,
         ConfirmImportHandler handler)

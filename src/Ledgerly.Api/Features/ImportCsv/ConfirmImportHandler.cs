@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Transactions;
 using Ledgerly.Api.Common.Data;
 using Ledgerly.Api.Common.Data.Entities;
 using Ledgerly.Api.Common.Exceptions;
@@ -66,107 +65,120 @@ public class ConfirmImportHandler
 
             _logger.LogDebug("Resolved hledger file path: {FilePath}", hledgerFilePath);
 
-            // Start TransactionScope for atomicity
-            using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            // Start database transaction for atomicity (SQLite-compatible)
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
-            // Convert DTOs to Transaction entities
-            var transactionEntities = new List<TransactionEntity>();
-            foreach (var dto in transactionsToImport)
-            {
-                var transaction = new TransactionEntity
-                {
-                    HledgerTransactionCode = Guid.NewGuid(),
-                    Date = dto.Date.Date, // Normalize to date only
-                    Payee = SanitizePayee(dto.Payee),
-                    Amount = dto.Amount, // Store as decimal (will convert when needed)
-                    Account = dto.Account,
-                    CategoryAccount = dto.Category,
-                    Memo = dto.Memo
-                };
-
-                // Compute hash for duplicate detection
-                transaction.UpdateHash();
-
-                transactionEntities.Add(transaction);
-            }
-
-            // Insert transactions to SQLite cache
-            await _dbContext.Transactions.AddRangeAsync(transactionEntities);
-            await _dbContext.SaveChangesAsync();
-
-            _logger.LogDebug("Inserted {Count} transactions into SQLite cache", transactionEntities.Count);
-
-            // Write transactions to .hledger file (bulk append for performance)
-            BulkWriteResult writeResult;
             try
             {
-                writeResult = await _fileWriter.BulkAppendAsync(transactionEntities, hledgerFilePath);
+                // Convert DTOs to Transaction entities
+                var transactionEntities = new List<TransactionEntity>();
+                foreach (var dto in transactionsToImport)
+                {
+                    var transactionEntity = new TransactionEntity
+                    {
+                        HledgerTransactionCode = Guid.NewGuid(),
+                        Date = dto.Date.Date, // Normalize to date only
+                        Payee = SanitizePayee(dto.Payee),
+                        Amount = dto.Amount, // Store as decimal (will convert when needed)
+                        Account = dto.Account,
+                        CategoryAccount = dto.Category,
+                        Memo = dto.Memo
+                    };
+
+                    // Compute hash for duplicate detection
+                    transactionEntity.UpdateHash();
+
+                    _logger.LogInformation(
+                        "Transaction saved: Date={Date}, Payee={Payee}, Amount={Amount}, Hash={Hash}",
+                        transactionEntity.Date, transactionEntity.Payee, transactionEntity.Amount, transactionEntity.Hash);
+
+                    transactionEntities.Add(transactionEntity);
+                }
+
+                // Insert transactions to SQLite cache
+                await _dbContext.Transactions.AddRangeAsync(transactionEntities);
+                await _dbContext.SaveChangesAsync();
+
+                _logger.LogDebug("Inserted {Count} transactions into SQLite cache", transactionEntities.Count);
+
+                // Write transactions to .hledger file (bulk append for performance)
+                BulkWriteResult writeResult;
+                try
+                {
+                    writeResult = await _fileWriter.BulkAppendAsync(transactionEntities, hledgerFilePath);
+                }
+                catch (HledgerValidationException ex)
+                {
+                    _logger.LogError(ex, "hledger validation failed during bulk write");
+                    throw new HledgerException(
+                        "Transaction validation failed. Please check your transaction data and try again.",
+                        ex);
+                }
+
+                _logger.LogInformation(
+                    "Successfully wrote {Count} transactions to .hledger file. Hash: {Before} -> {After}",
+                    writeResult.TransactionsWritten,
+                    writeResult.FileHashBefore,
+                    writeResult.FileHashAfter);
+
+                // Create CSV import audit record
+                var csvImportAudit = new CsvImport
+                {
+                    Id = Guid.NewGuid(),
+                    FileName = command.FileName,
+                    ImportedAt = DateTime.UtcNow,
+                    TotalRows = command.Transactions.Count,
+                    SuccessfulImports = transactionEntities.Count,
+                    DuplicatesSkipped = duplicatesSkipped,
+                    ErrorCount = 0,
+                    FileHash = ComputeFileHash(command.FileName), // Placeholder, would need actual CSV content
+                    UserId = command.UserId
+                };
+
+                await _dbContext.CsvImports.AddAsync(csvImportAudit);
+                await _dbContext.SaveChangesAsync();
+
+                // Create hledger file audit record
+                var fileAudit = new HledgerFileAudit
+                {
+                    Id = Guid.NewGuid(),
+                    Timestamp = DateTime.UtcNow,
+                    Operation = AuditOperation.CsvImport,
+                    FileHashBefore = writeResult.FileHashBefore,
+                    FileHashAfter = writeResult.FileHashAfter,
+                    TransactionCount = transactionEntities.Count,
+                    BalanceChecksum = 0, // Placeholder, would need to query hledger
+                    TriggeredBy = AuditTrigger.User,
+                    RelatedEntityId = csvImportAudit.Id,
+                    UserId = command.UserId,
+                    FilePath = hledgerFilePath
+                };
+
+                await _dbContext.HledgerFileAudits.AddAsync(fileAudit);
+                await _dbContext.SaveChangesAsync();
+
+                // Commit database transaction
+                await transaction.CommitAsync();
+
+                _logger.LogInformation(
+                    "Successfully confirmed import: {Imported} transactions imported, {Skipped} duplicates skipped",
+                    transactionEntities.Count,
+                    duplicatesSkipped);
+
+                return new ConfirmImportResponse
+                {
+                    Success = true,
+                    TransactionsImported = transactionEntities.Count,
+                    DuplicatesSkipped = duplicatesSkipped,
+                    TransactionIds = transactionEntities.Select(t => t.HledgerTransactionCode).ToList()
+                };
             }
-            catch (HledgerValidationException ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "hledger validation failed during bulk write");
-                throw new HledgerException(
-                    "Transaction validation failed. Please check your transaction data and try again.",
-                    ex);
+                // Transaction will automatically rollback on exception
+                await transaction.RollbackAsync();
+                throw;
             }
-
-            _logger.LogInformation(
-                "Successfully wrote {Count} transactions to .hledger file. Hash: {Before} -> {After}",
-                writeResult.TransactionsWritten,
-                writeResult.FileHashBefore,
-                writeResult.FileHashAfter);
-
-            // Create CSV import audit record
-            var csvImportAudit = new CsvImport
-            {
-                Id = Guid.NewGuid(),
-                FileName = command.FileName,
-                ImportedAt = DateTime.UtcNow,
-                TotalRows = command.Transactions.Count,
-                SuccessfulImports = transactionEntities.Count,
-                DuplicatesSkipped = duplicatesSkipped,
-                ErrorCount = 0,
-                FileHash = ComputeFileHash(command.FileName), // Placeholder, would need actual CSV content
-                UserId = command.UserId
-            };
-
-            await _dbContext.CsvImports.AddAsync(csvImportAudit);
-            await _dbContext.SaveChangesAsync();
-
-            // Create hledger file audit record
-            var fileAudit = new HledgerFileAudit
-            {
-                Id = Guid.NewGuid(),
-                Timestamp = DateTime.UtcNow,
-                Operation = AuditOperation.CsvImport,
-                FileHashBefore = writeResult.FileHashBefore,
-                FileHashAfter = writeResult.FileHashAfter,
-                TransactionCount = transactionEntities.Count,
-                BalanceChecksum = 0, // Placeholder, would need to query hledger
-                TriggeredBy = AuditTrigger.User,
-                RelatedEntityId = csvImportAudit.Id,
-                UserId = command.UserId,
-                FilePath = hledgerFilePath
-            };
-
-            await _dbContext.HledgerFileAudits.AddAsync(fileAudit);
-            await _dbContext.SaveChangesAsync();
-
-            // Commit transaction scope
-            scope.Complete();
-
-            _logger.LogInformation(
-                "Successfully confirmed import: {Imported} transactions imported, {Skipped} duplicates skipped",
-                transactionEntities.Count,
-                duplicatesSkipped);
-
-            return new ConfirmImportResponse
-            {
-                Success = true,
-                TransactionsImported = transactionEntities.Count,
-                DuplicatesSkipped = duplicatesSkipped,
-                TransactionIds = transactionEntities.Select(t => t.HledgerTransactionCode).ToList()
-            };
         }
         catch (HledgerException)
         {

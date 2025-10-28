@@ -1,1 +1,264 @@
-/* You can add global styles to this file, and also import other style files */
+/* ============================================
+   LEDGERLY GLOBAL STYLES
+   ============================================ */
+
+/* Import design system tokens */
+@import './theme/design-tokens.css';
+
+/* ============================================
+   GLOBAL RESETS & BASE STYLES
+   ============================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--foreground);
+  background-color: var(--background);
+  overflow-x: hidden;
+}
+
+/* ============================================
+   TYPOGRAPHY DEFAULTS
+   ============================================ */
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  padding: 0;
+  font-weight: var(--font-semibold);
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+h1 {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+}
+
+h2 {
+  font-size: var(--text-2xl);
+}
+
+h3 {
+  font-size: var(--text-xl);
+}
+
+p {
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: var(--accent-color);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   ANGULAR MATERIAL THEME OVERRIDES
+   ============================================ */
+
+/* Apply design system colors to Material components */
+.mat-mdc-card {
+  background-color: var(--card-background) !important;
+  color: var(--card-foreground) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.mat-mdc-button,
+.mat-mdc-raised-button,
+.mat-mdc-flat-button {
+  border-radius: var(--radius-md) !important;
+}
+
+/* Primary buttons - use accent color */
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-flat-button.mat-primary {
+  background-color: var(--accent-color) !important;
+  color: var(--accent-foreground) !important;
+}
+
+/* Warn buttons - use destructive color */
+.mat-mdc-raised-button.mat-warn,
+.mat-mdc-flat-button.mat-warn {
+  background-color: var(--destructive-color) !important;
+  color: var(--destructive-foreground) !important;
+}
+
+/* Form fields */
+.mat-mdc-form-field {
+  font-family: var(--font-family);
+}
+
+/* Chips */
+.mat-mdc-chip {
+  border-radius: var(--radius-full) !important;
+}
+
+/* Tables */
+.mat-mdc-table {
+  background-color: var(--card-background) !important;
+  color: var(--card-foreground) !important;
+}
+
+.mat-mdc-header-row {
+  background-color: var(--muted-background) !important;
+}
+
+.mat-mdc-row:hover {
+  background-color: var(--muted-background) !important;
+  transition: background-color 0.2s ease;
+}
+
+/* Dialogs */
+.mat-mdc-dialog-container {
+  background-color: var(--card-background) !important;
+  color: var(--card-foreground) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+/* Snackbars */
+.mat-mdc-snack-bar-container {
+  background-color: var(--card-background) !important;
+  color: var(--card-foreground) !important;
+  border: 1px solid var(--border-color);
+}
+
+.mat-mdc-snack-bar-container.success-snackbar {
+  background-color: var(--success-color) !important;
+  color: var(--success-foreground) !important;
+}
+
+.mat-mdc-snack-bar-container.error-snackbar {
+  background-color: var(--destructive-color) !important;
+  color: var(--destructive-foreground) !important;
+}
+
+/* ============================================
+   CUSTOM SCROLLBAR (Webkit browsers)
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--muted-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-color);
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-12);
+  gap: var(--spacing-4);
+}
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-8);
+  background-color: rgba(var(--destructive-color), 0.1);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--destructive-color);
+}
+
+.error {
+  color: var(--destructive-color);
+  font-weight: var(--font-medium);
+}
+
+/* ============================================
+   ANIMATION UTILITIES
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* ============================================
+   RESPONSIVE UTILITIES
+   ============================================ */
+
+/* Container widths for different breakpoints */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-4);
+  padding-right: var(--spacing-4);
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1366px) {
+  .container {
+    max-width: 1366px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .container {
+    max-width: 1920px;
+  }
+}
